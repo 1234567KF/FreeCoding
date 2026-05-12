@@ -1,0 +1,120 @@
+{
+  "schemaVersion": "1.1",
+  "description": "Multivendor model registry for kf-model-router. Configuration-driven, zero code changes to register new models.",
+  "providers": [
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "baseUrl": "https://api.deepseek.com/v1",
+      "envKey": "DEEPSEEK_API_KEY",
+      "healthEndpoint": "/models",
+      "adapter": "deepseek",
+      "adapterPath": "skills/kf-model-router/providers/",
+      "rateLimit": {
+        "capacity": 16,
+        "fillRate": 0.26,
+        "maxQueueTime": 5000,
+        "refillInterval": 1000
+      },
+      "models": [
+        {
+          "id": "deepseek-v4-pro",
+          "family": "pro",
+          "description": "DeepSeek v4 Pro — heavy reasoning",
+          "capabilities": ["deep-reasoning", "complex-code", "architecture", "planning", "bug-debug"],
+          "costPer1KInput": 3.0,
+          "costPer1KOutput": 15.0,
+          "cacheHitCostPer1KInput": 0.025,
+          "supportsCache": true,
+          "priority": 1,
+          "defaultFor": ["architecture", "bug-debug", "planning"],
+          "providerModelId": "deepseek-v4-pro"
+        },
+        {
+          "id": "deepseek-v4-flash",
+          "family": "flash",
+          "description": "DeepSeek v4 Flash — fast execution",
+          "capabilities": ["code", "review", "qa", "docs", "chat", "testing", "ui-prototype", "simple-qa"],
+          "costPer1KInput": 1.0,
+          "costPer1KOutput": 5.0,
+          "cacheHitCostPer1KInput": 0.02,
+          "supportsCache": true,
+          "priority": 10,
+          "defaultFor": ["coding", "review", "testing", "docs", "ui-prototype", "simple-qa"],
+          "providerModelId": "deepseek-v4-flash"
+        }
+      ]
+    },
+    {
+      "id": "minimax",
+      "name": "MiniMax",
+      "baseUrl": "https://api.minimax.chat/v1",
+      "envKey": "MINIMAX_API_KEY",
+      "healthEndpoint": "/models",
+      "adapter": "minimax",
+      "adapterPath": "skills/kf-model-router/providers/",
+      "rateLimit": {
+        "capacity": 24,
+        "fillRate": 0.4,
+        "maxQueueTime": 5000,
+        "refillInterval": 1000
+      },
+      "models": [
+        {
+          "id": "minimax-2.7",
+          "family": "pro",
+          "description": "MiniMax 2.7 — general purpose",
+          "capabilities": ["deep-reasoning", "code", "chat", "review", "testing", "docs", "planning", "architecture"],
+          "costPer1KInput": 1.0,
+          "costPer1KOutput": 5.0,
+          "cacheHitCostPer1KInput": null,
+          "supportsCache": false,
+          "priority": 10,
+          "defaultFor": ["docs", "ui-prototype"],
+          "providerModelId": "minimax-2.7"
+        }
+      ]
+    },
+    {
+      "id": "kimi",
+      "name": "Kimi",
+      "baseUrl": "https://api.moonshot.cn/v1",
+      "envKey": "KIMI_API_KEY",
+      "healthEndpoint": "/models",
+      "adapter": "kimi",
+      "adapterPath": "skills/kf-model-router/providers/",
+      "rateLimit": {
+        "capacity": 20,
+        "fillRate": 0.33,
+        "maxQueueTime": 5000,
+        "refillInterval": 1000
+      },
+      "models": [
+        {
+          "id": "kimi-k2.5",
+          "family": "pro",
+          "description": "Kimi K2.5 — 擅长前端、长文本读写、文档生成",
+          "capabilities": ["code", "frontend", "long-context", "docs", "chat", "review", "simple-qa", "ui-prototype"],
+          "costPer1KInput": 1.0,
+          "costPer1KOutput": 4.0,
+          "cacheHitCostPer1KInput": null,
+          "supportsCache": false,
+          "priority": 8,
+          "defaultFor": ["ui-prototype", "docs", "simple-qa", "formatting"],
+          "providerModelId": "kimi-k2.5"
+        }
+      ]
+    }
+  ],
+  "routingFallback": {
+    "strategy": "cost-first",
+    "defaultProvider": "deepseek",
+    "defaultModel": "deepseek-v4-flash"
+  },
+  "compatMappings": {
+    "pro": "deepseek-v4-pro",
+    "flash": "deepseek-v4-flash",
+    "sonnet": "deepseek-v4-flash",
+    "opus": "deepseek-v4-pro"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node {IDE_ROOT}/*)",
+      "Bash(npx *)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  },
+  "verbose": true,
+  "model": "deepseek-v4-flash",
+  "modelPreferences": {
+    "preferred": "deepseek-v4-flash",
+    "fallbacks": [
+      "deepseek-v4-pro"
+    ],
+    "automaticallySwitch": false
+  },
+  "env": {
+    "DEEPSEEK_API_KEY": "${DEEPSEEK_API_KEY}",
+    "MINIMAX_API_KEY": "${MINIMAX_API_KEY}",
+    "KIMI_API_KEY": "${KIMI_API_KEY}",
+    "AI_CODING_VERBOSE": "1"
+  }
+}

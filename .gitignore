@@ -1,0 +1,97 @@
+# =============================================================================
+# AI编程智驾框架 - 通用适配版 .gitignore
+# =============================================================================
+
+# ─── 本地配置文件（包含密钥，不提交）─────────────────────────────────────────
+# .qoder/ 目录下的本地配置
+.qoder/settings.local.json
+.qoder/.env
+.qoder/env.json
+
+# .trae/ 目录下的本地配置
+.trae/settings.local.json
+.trae/.env
+.trae/env.json
+
+# .cursor/ 目录下的本地配置
+.cursor/settings.local.json
+.cursor/.env
+
+# .windsurf/ 目录下的本地配置
+.windsurf/settings.local.json
+.windsurf/.env
+
+# 通用本地配置文件
+settings.local.json
+.env
+env.json
+*.local.json
+*.local.config
+
+# ─── IDE 配置文件（已包含在仓库，仅本地密钥不提交）──────────────────────────
+# 这些是安全的，可以提交：
+.qoder/qoder.md
+.qoder/settings.json
+.qoder/rules/
+.trae/rules/project_rules.md
+.trae/settings.json
+
+# ─── 状态文件（临时运行产物）────────────────────────────────────────────────
+# 串行执行状态
+*-state.json
+*-state.json.bak
+hang-state.json
+hang-state.json.bak
+hammer-state.json
+
+# 评审产物
+red-*.md
+blue-*.md
+green-*.md
+*-alignment.md
+*-review.md
+*-result.md
+
+# 门控文件
+gate-*.json
+gate-*.md
+
+# 临时输出
+tmp-*.md
+temp-*.md
+output-*.json
+
+# ─── 记忆/会话文件────────────────────────────────────────────────────────────
+memory/session/*.json
+memory/user/*.json
+memory/project.json.bak
+
+# ─── 监控/日志文件────────────────────────────────────────────────────────────
+monitor/*.log
+monitor/*.tmp
+*.log
+*.tmp
+
+# ─── 脚本执行产物────────────────────────────────────────────────────────────
+scripts/output/
+scripts/results/
+scripts/.cache/
+
+# ─── Node.js 运行时产物────────────────────────────────────────────────────────
+node_modules/
+*.node
+.npm/
+.yarn/
+
+# ─── 编辑器/IDE 临时文件──────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# ─── 系统文件─────────────────────────────────────────────────────────────────
+.gitignore.local
+.gitignore.sensitive

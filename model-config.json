@@ -1,0 +1,97 @@
+{
+  "providers": [
+    {
+      "name": "deepseek",
+      "apiKey": "${DEEPSEEK_API_KEY}",
+      "baseUrl": "https://api.deepseek.com/v1",
+      "models": [
+        {
+          "id": "deepseek-v4-pro",
+          "family": "pro",
+          "description": "DeepSeek V4 Pro — 深度推理",
+          "capabilities": ["deep-reasoning", "complex-code", "architecture", "planning"],
+          "costPer1KInput": 2.0,
+          "costPer1KOutput": 8.0,
+          "supportsCache": true,
+          "priority": 5,
+          "defaultFor": ["architecture", "planning", "deep-reasoning"],
+          "adapter": "deepseek"
+        },
+        {
+          "id": "deepseek-v4-flash",
+          "family": "flash",
+          "description": "DeepSeek V4 Flash — 快速执行 + 缓存优化",
+          "capabilities": ["code", "review", "qa", "docs", "chat", "testing"],
+          "costPer1KInput": 0.1,
+          "costPer1KOutput": 0.4,
+          "supportsCache": true,
+          "priority": 9,
+          "defaultFor": ["coding", "testing", "review", "docs"],
+          "adapter": "deepseek"
+        }
+      ]
+    },
+    {
+      "name": "minimax",
+      "apiKey": "${MINIMAX_API_KEY}",
+      "baseUrl": "https://api.minimax.chat/v1",
+      "models": [
+        {
+          "id": "abab6.5",
+          "family": "pro",
+          "description": "MiniMax abab6.5 — 深度思考",
+          "capabilities": ["deep-reasoning", "complex-code", "architecture", "planning"],
+          "costPer1KInput": 2.0,
+          "costPer1KOutput": 10.0,
+          "supportsCache": false,
+          "priority": 4,
+          "defaultFor": [],
+          "adapter": "minimax"
+        },
+        {
+          "id": "abab6.5s",
+          "family": "flash",
+          "description": "MiniMax abab6.5s — 快速执行",
+          "capabilities": ["code", "review", "qa", "docs", "chat", "testing"],
+          "costPer1KInput": 1.0,
+          "costPer1KOutput": 4.0,
+          "supportsCache": false,
+          "priority": 6,
+          "defaultFor": [],
+          "adapter": "minimax"
+        }
+      ]
+    },
+    {
+      "name": "kimi",
+      "apiKey": "${KIMI_API_KEY}",
+      "baseUrl": "https://api.moonshot.cn/v1",
+      "models": [
+        {
+          "id": "kimi-k2",
+          "family": "pro",
+          "description": "Kimi K2 — 长上下文深度推理",
+          "capabilities": ["deep-reasoning", "complex-code", "architecture", "planning", "long-context"],
+          "costPer1KInput": 2.0,
+          "costPer1KOutput": 10.0,
+          "supportsCache": false,
+          "priority": 3,
+          "defaultFor": ["long-context", "architecture"],
+          "adapter": "kimi"
+        },
+        {
+          "id": "kimi-k2-fast",
+          "family": "flash",
+          "description": "Kimi K2 Fast — 高效执行",
+          "capabilities": ["code", "review", "qa", "docs", "chat", "testing"],
+          "costPer1KInput": 1.0,
+          "costPer1KOutput": 4.0,
+          "supportsCache": false,
+          "priority": 8,
+          "defaultFor": ["coding", "testing"],
+          "adapter": "kimi"
+        }
+      ]
+    }
+  ]
+}
