@@ -1,161 +1,130 @@
-# ChronoCoding — AI 编程智驾框架（通用适配版）
+# ChronoCoding — AI 编程智驾框架
 
-## ⚠️ 下载后必看
+## 概述
 
-1. **下载后请先改名**：
-   - 若下载的文件名为 `{IDE_CONFIG}.template`，请重命名为 `qoder.md` 或 `project_rules.md`
-   - `qoder.md` → 用于 Qoder
-   - `project_rules.md` → 用于 Trae
-
-2. **安装目录说明**：
-   - **Qoder**：将文件安装到项目根目录的 `.qoder/` 子目录下
-   - **Trae**：将文件安装到项目根目录的 `.trae/` 子目录下
-
-## 框架概述
-
-ChronoCoding 是 AI 编程智驾框架，已从 Claude Code 专属改造为 **通用适配版**，可适配 Qoder、Trae、Cursor 等支持自定义规则/技能的 AI IDE。
+ChronoCoding 是 AI 编程智驾框架。你（AI Agent）正在阅读这份说明。
 
 ### 核心能力
 
-| 能力 | 说明 |
-|------|------|
-| `/夯` | 多团队竞争评审（红蓝绿三队串行执行） |
-| `/triple` | 红蓝评审三方协作（串行执行） |
-| `/align` | 需求对齐 |
-| `/spec` | 技术规格生成 |
-| `/review` | 代码审查 + 依赖图谱 |
-| `/prd` | PRD 文档生成 |
-| `/search` | 智能 Web 搜索 |
-| `/image` | AI 图片编辑（Gemini API） |
+| 能力 | 技能入口 | 说明 |
+|------|---------|------|
+| `/夯` | `kf-multi-team-compete` | 多团队竞争评审（红蓝绿三队并行/串行，含裁判+对抗+汇总） |
+| `/triple` | `kf-triple-collaboration` | 红蓝评审三方协作 |
+| `/align` | `kf-alignment` | 需求对齐 |
+| `/spec` | `kf-spec` | 技术规格生成 |
+| `/prd` | `kf-prd-generator` | PRD 文档生成 |
+| `/review` | `kf-code-review-graph` | 代码审查 + 依赖图谱 |
+| `/search` | `kf-web-search` | 智能 Web 搜索 |
+| `/image` | `kf-image-editor` | AI 图片编辑 |
 
----
+## 安装流程（AI 自动执行）
 
-## 给 AI 的安装说明
+> **给你的指令**：检测当前运行环境，执行对应 IDE 的安装。用户把本 README 发给你就是让你做这件事。如果遇到 API Key 缺失，主动询问用户提供。
 
-### 步骤 1: 理解目录结构
+### Step 1 — 检测 IDE 环境
 
-```
-{IDE_ROOT}/                    # 项目根目录，AI 的工作目录
-├── skills/                   # 技能目录
-│   ├── kf-multi-team-compete/ # /夯 技能（核心）
-│   ├── kf-alignment/          # 对齐技能
-│   ├── kf-spec/               # 规格技能
-│   └── ...                   # 其他 18+ 技能
-├── helpers/                  # 辅助脚本
-│   ├── hammer-bridge.cjs     # 串行状态机（核心）
-│   ├── hang-state-manager.cjs # 状态持久化
-│   ├── gate-executor.cjs     # 门控执行器
-│   └── ...                   # 其他 25+ 脚本
-├── rules/                    # 全局规则
-├── memory/                   # 记忆系统
-├── docs/                    # 用户文档
-├── model-config.json         # 模型配置（需填入 API Key）
-├── install.ps1 / install.sh   # 安装脚本
-└── {IDE_CONFIG}.template     # IDE 配置模板
+执行以下命令检测当前运行的是哪个 IDE：
+
+```bash
+node {IDE_ROOT}/helpers/orchestrator-qoder.cjs detect-ide
 ```
 
-### 步骤 2: 配置模型 API Key
+返回 `qoder` / `cursor` / `windsurf` / `trae` / `claude-code` / `unknown`。
 
-1. 打开 `model-config.json`
-2. 在对应 provider 下填入你的 API Key：
+> **注意**：`{IDE_ROOT}` 指你当前的工作目录（即本仓库所在目录）。后续所有路径都以 `{IDE_ROOT}` 为基准。
 
-```json
-{
-  "providers": {
-    "deepseek": { "apiKey": "sk-your-key" },
-    "minimax": { "apiKey": "your-key" },
-    "kimi": { "apiKey": "your-key" }
-  }
-}
-```
+### Step 2 — 安装配置文件
 
-3. 支持的模型（按供应商）：
-   - **DeepSeek**: `deepseek-chat` (pro), `deepseek-chat` (flash)
-   - **MiniMax**: `MiniMax-Text-01` (pro), `abab6.5s-chat` (flash)
-   - **Kimi**: `moonshot-v1-128k` (pro), `moonshot-v1-32k` (flash)
+根据检测到的 IDE，运行对应安装脚本：
 
-### 步骤 3: 运行安装脚本
-
-**重要**：安装脚本会将文件安装到**项目目录**下的隐藏目录中：
-- **Qoder** → 项目根目录的 `.qoder/` 子目录
-- **Trae** → 项目根目录的 `.trae/` 子目录
-
-**Windows:**
+**Windows (PowerShell):**
 ```powershell
-.\install.ps1 -IDE qoder
+.\install.ps1 -IDE <检测到的IDE>
 ```
 
 **macOS/Linux:**
 ```bash
-./install.sh -i qoder
+./install.sh -i <检测到的IDE>
 ```
 
-支持的 IDE 标识: `qoder`, `trae`, `cursor`, `vscode`, `windsurf`
+支持的 IDE 值：`qoder`, `trae`, `cursor`, `windsurf`（claude-code 映射到 cursor）。
 
-### 步骤 4: 验证安装
+### Step 3 — 配置 API Key
+
+检查 `model-config.json` 中的 API Key（占位符 `${DEEPSEEK_API_KEY}` 等）：
+
+1. 读取 `model-config.json`，检查所有 provider 的 `apiKey` 字段
+2. 若包含 `\${...}` 占位符 → 向用户提问对应 API Key
+3. 建议用户优先配置 **DeepSeek**（最稳定+支持缓存，家用级成本）
+4. 用户提供后优先写入环境变量（`DEEPSEEK_API_KEY` 等），回退写入 `model-config.json`
+
+```json
+{
+  "providers": [
+    {
+      "name": "deepseek",
+      "apiKey": "sk-用户提供的key",
+      "baseUrl": "https://api.deepseek.com/v1",
+      "models": [ ... ]
+    }
+  ]
+}
+```
+
+### Step 4 — 验证安装
+
+创建测试工作目录并验证核心脚本可用：
 
 ```bash
 node {IDE_ROOT}/helpers/hammer-bridge.cjs status
 node {IDE_ROOT}/helpers/hang-state-manager.cjs --dashboard
 ```
 
+若全部正常返回，告知用户安装完成并展示可用命令速查。
+
 ---
 
-## 变量说明
+## 执行模式说明
 
-| 变量 | 说明 | 示例 |
+当前框架有两种执行模式，AI 自动选路：
+
+| 场景 | 模式 | 速度 |
 |------|------|------|
-| `{IDE_ROOT}` | 项目根目录 | `D:\Projects\MyProject` |
-| `{IDE_CONFIG}` | IDE 配置目录 | `.qoder` 或 `.trae` |
+| Qoder IDE | **Qoder 并发模式** — Agent spawn 三路并发 | 最快 |
+| Claude Code | **真并发模式** — Agent() spawn 12+ Agent | 最快 |
+| Cursor / Windsurf / Trae / 其他 | **通用串行模式** — 当前会话角色切换 | 慢但兼容 |
 
-**重要**：所有技能和脚本使用 `{IDE_ROOT}` 变量化，适配不同 IDE 时自动替换。
-
----
-
-## 串行执行模式说明
-
-### 原 Claude Code 并发模式
-
-- Agent() spawn 12+ 真并发 Agent
-- 红蓝绿三队同时运行
-- ruflo swarm 面板追踪状态
-
-### 通用适配串行模式
-
-- 当前 AI 会话按角色切换串行执行
-- 红队 Stage 0→5 → 蓝队 Stage 0→5 → 绿队 Stage 0→5
-- 通过文件系统状态机追踪进度
-
-### 关键差异
-
-| 场景 | Claude Code | 通用 IDE |
-|------|------------|----------|
-| 执行 | Agent() spawn | 当前会话角色切换 |
-| 产物隔离 | 进程隔离 | 文件隔离（`red-*.md`等） |
-| 状态追踪 | ruflo 面板 | `hammer-bridge.cjs` + `hang-state.json` |
-| 中断恢复 | 会话丢失 | 文件持久化，支持断点续传 |
-| 缓存优化 | 并发共享前缀 | 串行顺序请求，命中率更高 |
+运行时 IDE 检测路径：`orchestrator-qoder.cjs detect-ide` → 自动选择模式，无需用户指定。
 
 ---
 
-## 触发词速查
+## 变量约定
 
-| 触发词 | 功能 | 调用技能 |
-|--------|------|----------|
-| `/夯` | 多团队竞争评审 | kf-multi-team-compete |
-| `/triple` | 红蓝评审 | kf-triple-collaboration |
-| `/align` | 需求对齐 | kf-alignment |
-| `/spec` | 技术规格 | kf-spec |
-| `/review` | 代码审查 | kf-code-review-graph |
-| `/prd` | PRD 生成 | kf-prd-generator |
-| `/search` | Web 搜索 | kf-web-search |
-| `/image` | 图片编辑 | kf-image-editor |
-| `/go` | 流程地图（在 /夯 中） | 内置于 kf-multi-team-compete |
-| `status` | 进度看板 | hang-state-manager.cjs |
+| 变量 | 含义 | 示例值 |
+|------|------|--------|
+| `{IDE_ROOT}` | 项目根目录（AI 当前工作目录） | `D:\Projects\MyProject` |
+
+所有技能和脚本使用 `{IDE_ROOT}` 变量化路径，确保跨平台一致。
 
 ---
 
-## 辅助脚本速查
+## 触发词速查（AI 注册用）
+
+| 触发词 | 注册到 IDE | 效果 |
+|--------|-----------|------|
+| `/夯` | Custom Instructions / Rules | 启动多团队竞争评审 |
+| `/triple` | Custom Instructions / Rules | 启动三方协作评审 |
+| `/align` | Custom Instructions / Rules | 需求对齐 |
+| `/spec` | Custom Instructions / Rules | 技术规格 |
+| `/prd` | Custom Instructions / Rules | PRD 生成 |
+| `/review` | Custom Instructions / Rules | 代码审查 |
+| `/search` | Custom Instructions / Rules | Web 搜索 |
+| `/image` | Custom Instructions / Rules | 图片编辑 |
+| `status` | 内置 | 进度看板 |
+
+---
+
+## 辅助脚本索引（AI 调用用）
 
 ```bash
 # 状态管理
@@ -166,13 +135,21 @@ node {IDE_ROOT}/helpers/hang-state-manager.cjs --sync-and-show
 # 阶段追踪
 node {IDE_ROOT}/helpers/hammer-bridge.cjs init --task "<任务>" --total-agents 18
 node {IDE_ROOT}/helpers/hammer-bridge.cjs agent-spawn --team red --agent fullstack --task-id T1
-node {IDE_ROOT}/helpers/hammer-bridge.cjs agent-done --team red --agent fullstack --output red-01.md
 node {IDE_ROOT}/helpers/hammer-bridge.cjs status
 
-# 门控
-node {IDE_ROOT}/helpers/gate-executor.cjs --scan red-alignment.md blue-alignment.md green-alignment.md
+# 门控执行
+node {IDE_ROOT}/helpers/gate-executor.cjs --scan red-00.md blue-00.md green-00.md
 node {IDE_ROOT}/helpers/gate-executor.cjs --status
-node {IDE_ROOT}/helpers/gate-executor.cjs --answer answers.json
+
+# 并发编排（Qoder 专用）
+node {IDE_ROOT}/helpers/orchestrator-qoder.cjs detect-ide
+node {IDE_ROOT}/helpers/orchestrator-qoder.cjs fan-out --teams red,blue,green --stage 0
+node {IDE_ROOT}/helpers/orchestrator-qoder.cjs fan-in --teams red,blue,green --stage 0 --wait-ms 300000
+node {IDE_ROOT}/helpers/orchestrator-qoder.cjs concurrent-status
+
+# 缓存预热（Qoder 并发前调用）
+node {IDE_ROOT}/helpers/cache-warmup.cjs should-warm
+node {IDE_ROOT}/helpers/cache-warmup.cjs mark
 
 # 验证
 node {IDE_ROOT}/helpers/harness-gate-check.cjs --skill kf-spec --stage review --required-sections "## Acceptance Criteria"
@@ -180,20 +157,22 @@ node {IDE_ROOT}/helpers/harness-gate-check.cjs --skill kf-spec --stage review --
 
 ---
 
-## 故障排除
+## 故障排除（AI 自检用）
 
-| 问题 | 解决 |
-|------|------|
-| 技能未触发 | 检查 IDE 是否注册了触发词 |
-| 路径错误 | 确认 `{IDE_ROOT}` 已正确设置 |
-| API Key 无效 | 检查 `model-config.json` 格式 |
-| 状态丢失 | 确认 `.claude-flow/` 目录有写入权限 |
-| 模型不支持缓存 | DeepSeek 支持缓存，其他供应商需手动处理 |
+| 现象 | AI 检查点 |
+|------|----------|
+| 技能未触发 | IDE 是否注册了触发词？检查 IDE 的 rules/custom-instructions 配置 |
+| 路径错误 | `{IDE_ROOT}` 是否指向正确的项目根目录？ |
+| API Key 无效 | 检查 `model-config.json` 中字段格式，确认环境变量已生效 |
+| 状态丢失 | `.claude-flow/` 目录是否有写入权限？ |
+| 缓存未生效 | DeepSeek 支持缓存，TTL 5min；其他供应商需手动检查 |
 
 ---
 
-## 相关文档
+## 文档索引
 
-- [快速开始](docs/01-快速开始.md) — 用户级快速上手指南
-- [技能清单](docs/02-技能清单.md) — 所有技能详细说明
-- [迁移指南](docs/03-迁移指南.md) — 从 Claude Code 迁移说明
+| 文档 | 用途 | 阅读方 |
+|------|------|--------|
+| [快速开始](docs/01-快速开始.md) | 用户入门指南 | 用户 |
+| [技能清单](docs/02-技能清单.md) | 所有技能详细说明 | AI + 用户 |
+| [迁移指南](docs/03-迁移指南.md) | 从 Claude Code 迁移 | AI |
