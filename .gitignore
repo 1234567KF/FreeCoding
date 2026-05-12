@@ -3,10 +3,9 @@
 # =============================================================================
 
 # ─── 本地配置文件（包含密钥，不提交）─────────────────────────────────────────
-# .qoder/ 目录下的本地配置
-.qoder/settings.local.json
-.qoder/.env
-.qoder/env.json
+# ─── IDE 专属目录（部署产物，由 install 脚本生成，不提交）─────────────────
+# .qoder/ 整个目录是 install 脚本的部署产物，真源在 skills/.../agents/ 等处
+.qoder/
 
 # .trae/ 目录下的本地配置
 .trae/settings.local.json
@@ -28,11 +27,7 @@ env.json
 *.local.json
 *.local.config
 
-# ─── IDE 配置文件（已包含在仓库，仅本地密钥不提交）──────────────────────────
-# 这些是安全的，可以提交：
-.qoder/qoder.md
-.qoder/settings.json
-.qoder/rules/
+# ─── IDE 配置文件（.trae 未实现全目录忽略，暂时逐文件管理）──────────────────
 .trae/rules/project_rules.md
 .trae/settings.json
 
