@@ -31,21 +31,33 @@ case "$IDE" in
         IDE_ROOT=".qoder"
         IDE_CONFIG="qoder.md"
         HAS_RULES=1
+        AGENTS_DIR="agents"
+        AGENTS_EXT=".md"
+        IS_SUBAGENT=1
         ;;
     trae)
         IDE_ROOT=".trae"
         IDE_CONFIG="rules/project_rules.md"
         HAS_RULES=1
+        AGENTS_DIR="rules"
+        AGENTS_EXT=".md"
+        IS_SUBAGENT=0
         ;;
     cursor)
         IDE_ROOT=".cursor"
         IDE_CONFIG=".cursorrules"
         HAS_RULES=0
+        AGENTS_DIR="rules"
+        AGENTS_EXT=".mdc"
+        IS_SUBAGENT=0
         ;;
     windsurf)
         IDE_ROOT=".windsurf"
         IDE_CONFIG=".windsurfrules"
         HAS_RULES=0
+        AGENTS_DIR="rules"
+        AGENTS_EXT=".md"
+        IS_SUBAGENT=0
         ;;
     *)
         echo "错误: 不支持的 IDE: $IDE"
@@ -107,6 +119,34 @@ echo "  [✓] model-config.json 已复制"
 
 sed "s|{IDE_ROOT}|$IDE_ROOT|g" "$SOURCE_DIR/settings.json.template" > "$IDE_ROOT_PATH/settings.json"
 echo "  [✓] settings.json 已生成"
+
+# ─── Step 3.5: 分发 /夯 子智能体定义到 IDE 专属目录 ──────────────────────
+echo ""
+echo "=== 分发 /夯 子智能体定义 ==="
+
+HAMMER_AGENTS_SOURCE="$SOURCE_DIR/skills/kf-multi-team-compete/kf-multi-team-compete/agents"
+if [[ -d "$HAMMER_AGENTS_SOURCE" ]]; then
+    AGENTS_TARGET="$IDE_ROOT_PATH/$AGENTS_DIR"
+    mkdir -p "$AGENTS_TARGET"
+
+    AGENT_COUNT=0
+    for f in "$HAMMER_AGENTS_SOURCE"/kf-hammer-*.md; do
+        [[ -f "$f" ]] || continue
+        base=$(basename "$f" .md)
+        cp "$f" "$AGENTS_TARGET/${base}${AGENTS_EXT}"
+        AGENT_COUNT=$((AGENT_COUNT+1))
+    done
+
+    if [[ "$IS_SUBAGENT" -eq 1 ]]; then
+        echo "  [✓] 已分发 $AGENT_COUNT 个子智能体定义 → $AGENTS_DIR/"
+        echo "  [i] $IDE 原生支持 Agent 并发调用（真并发模式）"
+    else
+        echo "  [✓] 已分发 $AGENT_COUNT 个角色规则 → $AGENTS_DIR/"
+        echo "  [i] $IDE 无原生 subagent，/夯 走串行角色切换模式"
+    fi
+else
+    echo "  [!] 未找到 shared agents 源目录，跳过"
+fi
 
 # ─── Step 4: 生成 IDE 主配置 ───────────────────────────────────────────
 echo ""

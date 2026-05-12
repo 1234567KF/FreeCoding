@@ -88,13 +88,17 @@ node {IDE_ROOT}/helpers/hang-state-manager.cjs --dashboard
 
 当前框架有两种执行模式，AI 自动选路：
 
-| 场景 | 模式 | 速度 |
-|------|------|------|
-| Qoder IDE | **Qoder 并发模式** — Agent spawn 三路并发 | 最快 |
-| Claude Code | **真并发模式** — Agent() spawn 12+ Agent | 最快 |
-| Cursor / Windsurf / Trae / 其他 | **通用串行模式** — 当前会话角色切换 | 慢但兼容 |
+| IDE | Agent() 真并发 | `/夯` 执行模式 | 进度 UI | 子智能体落地 |
+|-----|-----------------|-----------------|---------|--------------|
+| **Qoder** | ✅ | 跨队 3 路并发 | IDE 对话框原生专家团卡片 | `.qoder/agents/*.md` |
+| **Claude Code** | ✅ | 跨队 3 路并发 | Task 工具卡片 | `.claude/agents/*.md` |
+| **Cursor** | ❌ | 串行角色切换 | 主会话文本 + CLI 看板 | `.cursor/rules/*.mdc` |
+| **Trae** | ❌ | 串行角色切换 | 主会话文本 + CLI 看板 | `.trae/rules/*.md` |
+| **Windsurf** | ❌ | 串行角色切换 | 主会话文本 + CLI 看板 | `.windsurf/rules/*.md` |
 
-运行时 IDE 检测路径：`orchestrator-qoder.cjs detect-ide` → 自动选择模式，无需用户指定。
+- 运行时 IDE 检测路径：`orchestrator-qoder.cjs detect-ide` → 自动选择模式，无需用户指定
+- `/夯` 子智能体定义的**单一真源**在 `skills/kf-multi-team-compete/kf-multi-team-compete/agents/`，由 install 脚本按 IDE 分发
+- 不支持 Agent() 的 IDE：子智能体 md 作为角色规则，主会话读取后轮换模拟三队
 
 ---
 

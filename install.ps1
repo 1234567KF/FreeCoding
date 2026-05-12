@@ -27,11 +27,18 @@ param(
 $ErrorActionPreference = "Stop"
 
 # ─── IDE 配置映射 ──────────────────────────────────────────────────────
+# AgentsDir  : /夯 子智能体定义分发目录（相对 Root）
+# AgentsExt  : 扩展名（Cursor 用 .mdc，其余 .md）
+# IsSubagent : true=IDE 原生支持 Agent() 真并发；false=仅作为角色规则，串行模拟
 $IDE_MAP = @{
-    qoder    = @{ Root = ".qoder"; Config = "qoder.md"; HasRulesDir = $true }
-    trae     = @{ Root = ".trae";  Config = "rules/project_rules.md"; HasRulesDir = $true }
-    cursor   = @{ Root = ".cursor"; Config = ".cursorrules"; HasRulesDir = $false }
-    windsurf = @{ Root = ".windsurf"; Config = ".windsurfrules"; HasRulesDir = $false }
+    qoder    = @{ Root = ".qoder"; Config = "qoder.md"; HasRulesDir = $true;
+                  AgentsDir = "agents"; AgentsExt = ".md";  IsSubagent = $true }
+    trae     = @{ Root = ".trae";  Config = "rules/project_rules.md"; HasRulesDir = $true;
+                  AgentsDir = "rules";  AgentsExt = ".md";  IsSubagent = $false }
+    cursor   = @{ Root = ".cursor"; Config = ".cursorrules"; HasRulesDir = $false;
+                  AgentsDir = "rules";  AgentsExt = ".mdc"; IsSubagent = $false }
+    windsurf = @{ Root = ".windsurf"; Config = ".windsurfrules"; HasRulesDir = $false;
+                  AgentsDir = "rules";  AgentsExt = ".md";  IsSubagent = $false }
 }
 
 $IDE_CFG = $IDE_MAP[$IDE]
@@ -103,6 +110,32 @@ $settingsTemplate = Get-Content (Join-Path $SourceDir "settings.json.template") 
 $settingsContent = $settingsTemplate -replace "\{IDE_ROOT\}", $IDE_CFG.Root
 Set-Content -Path (Join-Path $IDERoot "settings.json") -Value $settingsContent -Encoding UTF8
 Write-Host "  [✓] settings.json 已生成" -ForegroundColor Green
+
+# ─── Step 3.5: 分发 /夯 子智能体定义到 IDE 专属目录 ──────────────────────
+Write-Host "`n=== 分发 /夯 子智能体定义 ===" -ForegroundColor Cyan
+
+$HammerAgentsSource = Join-Path $SourceDir "skills\kf-multi-team-compete\kf-multi-team-compete\agents"
+if (Test-Path $HammerAgentsSource) {
+    $AgentsTarget = Join-Path $IDERoot $IDE_CFG.AgentsDir
+    New-Item -ItemType Directory -Force -Path $AgentsTarget | Out-Null
+
+    $agentFiles = Get-ChildItem -Path $HammerAgentsSource -Filter "kf-hammer-*.md"
+    foreach ($f in $agentFiles) {
+        $baseName = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
+        $targetFile = Join-Path $AgentsTarget "$baseName$($IDE_CFG.AgentsExt)"
+        Copy-Item -Path $f.FullName -Destination $targetFile -Force
+    }
+
+    if ($IDE_CFG.IsSubagent) {
+        Write-Host "  [✓] 已分发 $($agentFiles.Count) 个子智能体定义 → $($IDE_CFG.AgentsDir)/" -ForegroundColor Green
+        Write-Host "  [i] $IDE 原生支持 Agent 并发调用（真并发模式）" -ForegroundColor Gray
+    } else {
+        Write-Host "  [✓] 已分发 $($agentFiles.Count) 个角色规则 → $($IDE_CFG.AgentsDir)/" -ForegroundColor Green
+        Write-Host "  [i] $IDE 无原生 subagent，/夯 走串行角色切换模式" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "  [!] 未找到 shared agents 源目录，跳过" -ForegroundColor Yellow
+}
 
 # ─── Step 4: 生成 IDE 主配置 ───────────────────────────────────────────
 Write-Host "`n=== 生成 IDE 主配置 ===" -ForegroundColor Cyan

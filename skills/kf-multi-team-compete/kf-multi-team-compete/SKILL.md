@@ -68,9 +68,28 @@ graph:
 - **IDE 检测**：`node {IDE_ROOT}/helpers/orchestrator-qoder.cjs detect-ide` 返回 `qoder`
 - **跳转分支**：见 [qoder-concurrent.md](qoder-concurrent.md)
 - **并发粒度**：跨队 3 路并行（红/蓝/绿同时推进 Stage 0→5），队内仍按角色串行
-- **子智能体**：`.qoder/agents/kf-hammer-{red|blue|green|judge|adversary}-team.md`
+- **子智能体**：`.qoder/agents/kf-hammer-{red|blue|green|judge|adversary}-team.md`（由 `install.ps1` 从 shared 真源分发）
 - **编排工具**：`orchestrator-qoder.cjs fan-out/fan-in` + `cache-warmup.cjs`
-- **并排看板**：`hang-state-manager.cjs --concurrent-dashboard`
+- **进度 UI**：直接使用 Qoder IDE 对话框内原生的 Agent 调用卡片（主会话同回复并发 3 个 Agent → IDE 自动渲染并排专家团卡片）
+- **可选调试看板**：`hang-state-manager.cjs --concurrent-dashboard`（CLI 辅助，非主 UI）
+
+【跨 IDE 子智能体分发规则】
+5 个子智能体的**单一真源**位于：
+`skills/kf-multi-team-compete/kf-multi-team-compete/agents/kf-hammer-{red|blue|green|judge|adversary}-team.md`
+
+`install.ps1` / `install.sh` 自动按目标 IDE 分发到对应位置：
+
+| IDE | 目标路径 | 扩展名 | Agent() 真并发 | /夯 执行模式 |
+|-----|---------|--------|----------------|--------------|
+| **Qoder** | `.qoder/agents/` | `.md` | ✅ 支持 | 跨队 3 路并发 |
+| **Claude Code** | `.claude/agents/` | `.md` | ✅ 支持 | 跨队 3 路并发 |
+| **Cursor** | `.cursor/rules/` | `.mdc` | ❌ 不支持 | 串行角色切换 |
+| **Trae** | `.trae/rules/` | `.md` | ❌ 不支持 | 串行角色切换 |
+| **Windsurf** | `.windsurf/rules/` | `.md` | ❌ 不支持 | 串行角色切换 |
+
+- 从不支持 subagent 的 IDE ：子智能体 md 作为角色规则落地，主会话读取后按角色轮换模拟三队
+- 修改时永远只改 `skills/.../agents/` 下的真源，重新跑 `install` 脚本同步
+- 细则见 [agents/README.md](agents/README.md)
 
 其他 IDE（Cursor / Windsurf / Trae / Claude Code 降级）：继续使用下文通用串行流程。
 
