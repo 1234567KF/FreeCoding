@@ -1,8 +1,8 @@
-# ChronoCoding — AI 编程智驾框架
+# FreeCoding —  AI 编程智驾框架
 
 ## 概述
 
-ChronoCoding 是 AI 编程智驾框架。你（AI Agent）正在阅读这份说明。
+ FreeCoding ，源于基于claude code的ChronoCoding 是 AI 编程智驾框架。你（AI Agent）正在阅读这份说明。
 
 ### 核心能力
 

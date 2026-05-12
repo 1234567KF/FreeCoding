@@ -63,6 +63,17 @@ graph:
 - **状态持久化**：通过 hang-state-manager.cjs 记录断点，支持中断恢复
 - **导航看板**：Phase 1.6 集成流程地图 + 进度面板（原 kf-go 功能合并）
 
+【Qoder 并发增强路径】
+若当前 IDE = Qoder，本技能自动切换到真并发执行分支：
+- **IDE 检测**：`node {IDE_ROOT}/helpers/orchestrator-qoder.cjs detect-ide` 返回 `qoder`
+- **跳转分支**：见 [qoder-concurrent.md](qoder-concurrent.md)
+- **并发粒度**：跨队 3 路并行（红/蓝/绿同时推进 Stage 0→5），队内仍按角色串行
+- **子智能体**：`.qoder/agents/kf-hammer-{red|blue|green|judge|adversary}-team.md`
+- **编排工具**：`orchestrator-qoder.cjs fan-out/fan-in` + `cache-warmup.cjs`
+- **并排看板**：`hang-state-manager.cjs --concurrent-dashboard`
+
+其他 IDE（Cursor / Windsurf / Trae / Claude Code 降级）：继续使用下文通用串行流程。
+
 核心理念：红蓝绿三队各按 **Pipeline 流水线** 串行推进，
 不同视角方案碰撞，裁判择优，汇总博采众长，**对抗者从易错角度挑战**，
 汇总者回应调整并执行，输出碾压级方案。
@@ -568,6 +579,8 @@ Team Lead 不直接参与红/蓝/绿队的执行，而是：
 ---
 
 ## 执行流程
+
+> **Qoder 用户注意**：如果 `orchestrator-qoder.cjs detect-ide` 返回 `qoder`，请跳转到 [qoder-concurrent.md](qoder-concurrent.md) 执行并发版流程。下文是通用 IDE 串行版执行细节。
 
 ### Step 0 — 环境准备
 

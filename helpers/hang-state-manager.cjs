@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 /**
  * hang-state-manager.cjs — 夯执行状态持久化管理器（通用 IDE 串行适配版）
  *
@@ -99,6 +99,8 @@ function init(taskName, depth) {
     },
     artifacts: {},
     show_dashboard: true,
+    execution_mode: 'serial', // 'serial' | 'concurrent' (Qoder)
+    ide: null,                // 'qoder' / 'cursor' / 'trae' / ...
     created_at: new Date().toISOString(),
     last_updated: new Date().toISOString(),
   };
@@ -334,6 +336,102 @@ function progressBar(percent, width) {
 }
 
 // ─── Generate progress dashboard ───
+// ─── Set execution mode (serial | concurrent) ───
+function setConcurrentMode(ide) {
+  const state = getState();
+  if (!state) return { ok: false, error: 'No active hang session. Run --init first.' };
+  state.execution_mode = 'concurrent';
+  state.ide = ide || state.ide || 'qoder';
+  writeState(state);
+  return { ok: true, state };
+}
+
+function setSerialMode() {
+  const state = getState();
+  if (!state) return { ok: false, error: 'No active hang session. Run --init first.' };
+  state.execution_mode = 'serial';
+  writeState(state);
+  return { ok: true, state };
+}
+
+// ─── Generate concurrent side-by-side dashboard ───
+function concurrentDashboard() {
+  const state = getState();
+  if (!state) return '⚠️ 无活跃的夯会话。请先触发 /夯 [任务]。';
+
+  const lines = [];
+  const W = 72;
+  const COL_W = 20; // 每列宽度
+
+  lines.push(`┌${'─'.repeat(W - 2)}┐`);
+  const title = state.execution_mode === 'concurrent'
+    ? `夯 Qoder 并发看板 (3路并行)`
+    : `夯 并排看板`;
+  lines.push(`│  ${title.padEnd(W - 4)}│`);
+  lines.push(`│${' '.repeat(W - 2)}│`);
+
+  const taskLine = `  任务: ${(state.task_name || '未命名').substring(0, W - 10)}`;
+  lines.push(`│${taskLine.padEnd(W - 2)}│`);
+
+  const modeLabel = state.execution_mode === 'concurrent' ? '并发' : '串行';
+  const ideLabel = state.ide ? ` @ ${state.ide}` : '';
+  const depthLine = `  深度: ${state.depth} (${state.depth_label || ''})    模式: ${modeLabel}${ideLabel}`;
+  lines.push(`│${depthLine.padEnd(W - 2)}│`);
+  lines.push(`│${' '.repeat(W - 2)}│`);
+
+  // 并排题头
+  const header = `    红队              蓝队              绿队`;
+  lines.push(`│${header.padEnd(W - 2)}│`);
+
+  // 进度条并排
+  const teams = ['red', 'blue', 'green'];
+  const progress = state.team_progress || {};
+  const bars = teams.map(t => {
+    const p = progress[t] || { percent: 0, stage: 'stage_0' };
+    return { bar: progressBar(p.percent || 0, 12), pct: p.percent || 0, stage: p.stage || 'stage_0' };
+  });
+  const barLine = `    ${bars[0].bar} ${String(bars[0].pct).padStart(3)}%  ${bars[1].bar} ${String(bars[1].pct).padStart(3)}%  ${bars[2].bar} ${String(bars[2].pct).padStart(3)}%`;
+  lines.push(`│${barLine.padEnd(W - 2)}│`);
+  const stageLine = `    ${bars[0].stage.padEnd(15)} ${bars[1].stage.padEnd(15)} ${bars[2].stage.padEnd(15)}`;
+  lines.push(`│${stageLine.padEnd(W - 2)}│`);
+  lines.push(`│${' '.repeat(W - 2)}│`);
+
+  // 各阶段各队状态 (stage 0-5)
+  const STAGE_ICONS = { done: '✅', running: '🔄', pending: '⏳' };
+  const stages = ['stage_0', 'stage_1', 'stage_2', 'stage_3', 'stage_4', 'stage_5'];
+  lines.push(`│  各队阶段进度:${' '.repeat(W - 15)}│`);
+  for (const s of stages) {
+    const marks = teams.map(t => {
+      const p = progress[t] || {};
+      const curIdx = stages.indexOf(p.stage || 'stage_0');
+      const thisIdx = stages.indexOf(s);
+      if (thisIdx < curIdx) return STAGE_ICONS.done;
+      if (thisIdx === curIdx) return (p.percent || 0) >= 100 ? STAGE_ICONS.done : STAGE_ICONS.running;
+      return STAGE_ICONS.pending;
+    });
+    const sLabel = s.replace('stage_', 'S');
+    const line = `    ${sLabel}  ${marks[0]}              ${marks[1]}              ${marks[2]}`;
+    lines.push(`│${line.padEnd(W - 2)}│`);
+  }
+  lines.push(`│${' '.repeat(W - 2)}│`);
+
+  // 产物概览
+  const artifacts = Object.entries(state.artifacts || {});
+  if (artifacts.length > 0) {
+    const redN = artifacts.filter(([k]) => k.startsWith('red')).length;
+    const blueN = artifacts.filter(([k]) => k.startsWith('blue')).length;
+    const greenN = artifacts.filter(([k]) => k.startsWith('green')).length;
+    const artLine = `  产物: 红${redN} | 蓝${blueN} | 绿${greenN}  共 ${artifacts.length} 个`;
+    lines.push(`│${artLine.padEnd(W - 2)}│`);
+    lines.push(`│${' '.repeat(W - 2)}│`);
+  }
+
+  lines.push(`│  输入 status 刷新 │ concurrent-status JSON 输出${' '.repeat(8)}│`);
+  lines.push(`└${'─'.repeat(W - 2)}┘`);
+
+  return lines.join('\n');
+}
+
 function dashboard() {
   const state = getState();
   if (!state) return '⚠️ 无活跃的夯会话。请先触发 /夯 [任务]。';
@@ -577,6 +675,25 @@ function cli() {
     process.exit(result.ok ? 0 : 1);
   }
 
+  if (args.includes('--concurrent-dashboard') || args.includes('-c')) {
+    console.log(concurrentDashboard());
+    process.exit(0);
+  }
+
+  if (args.includes('--concurrent-mode')) {
+    const idx = args.indexOf('--concurrent-mode') + 1;
+    const ide = args[idx] && !args[idx].startsWith('-') ? args[idx] : 'qoder';
+    const result = setConcurrentMode(ide);
+    console.log(JSON.stringify(result, null, 2));
+    process.exit(result.ok ? 0 : 1);
+  }
+
+  if (args.includes('--serial-mode')) {
+    const result = setSerialMode();
+    console.log(JSON.stringify(result, null, 2));
+    process.exit(result.ok ? 0 : 1);
+  }
+
   if (args.includes('--dashboard')) {
     console.log(dashboard());
     process.exit(0);
@@ -639,6 +756,8 @@ function cli() {
   console.log('  状态:     hang-state-manager.cjs --status');
   console.log('  完成:     hang-state-manager.cjs --complete');
   console.log('  交接:     hang-state-manager.cjs --handoff');
+  console.log('  并发看板: hang-state-manager.cjs --concurrent-dashboard');
+  console.log('  开并发:   hang-state-manager.cjs --concurrent-mode qoder');
   console.log('  清理:     hang-state-manager.cjs --remove');
 }
 
@@ -652,9 +771,12 @@ module.exports = {
   updateTeamProgress,
   addArtifact,
   setDashboard,
+  setConcurrentMode,
+  setSerialMode,
   getState,
   isRecoveryNeeded,
   dashboard,
+  concurrentDashboard,
   recoveryOptions,
   generateHandoff,
   complete,
