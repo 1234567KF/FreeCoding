@@ -1,55 +1,63 @@
 # =============================================================================
-# AI编程智驾框架 - 通用适配版 .gitignore
+# FreeCoding — ChronoCoding AI 编程智驾框架 .gitignore
+# =============================================================================
+#
+# 策略说明：
+# - .qoder/ 作为 Qoder 默认最佳实践实例提交到仓库，用户 clone 即用
+# - .trae/ .cursor/ .windsurf/ 由 install 脚本生成，不提交
+# - 仅排除含密钥的本地配置和临时运行产物
 # =============================================================================
 
-# ─── 本地配置文件（包含密钥，不提交）─────────────────────────────────────────
-# ─── IDE 专属目录（部署产物，由 install 脚本生成，不提交）─────────────────
-# .qoder/ 整个目录是 install 脚本的部署产物，真源在 skills/.../agents/ 等处
-.qoder/
+# ─── 密钥/本地配置（绝不提交）──────────────────────────────────────────────────
+settings.local.json
+*.local.json
+*.local.config
+.env
+.env.*
+!.env.example
+env.json
 
-# .trae/ 目录下的本地配置
+# .qoder/ 中的密钥文件
+.qoder/settings.local.json
+.qoder/.env
+.qoder/.env.*
+
+# 其他 IDE 的密钥文件
 .trae/settings.local.json
 .trae/.env
-.trae/env.json
-
-# .cursor/ 目录下的本地配置
 .cursor/settings.local.json
 .cursor/.env
-
-# .windsurf/ 目录下的本地配置
 .windsurf/settings.local.json
 .windsurf/.env
 
-# 通用本地配置文件
-settings.local.json
-.env
-env.json
-*.local.json
-*.local.config
+# ─── 其他 IDE 部署目录（由 install 脚本生成）──────────────────────────────────
+.trae/
+.cursor/
+.windsurf/
 
-# ─── IDE 配置文件（.trae 未实现全目录忽略，暂时逐文件管理）──────────────────
-.trae/rules/project_rules.md
-.trae/settings.json
-
-# ─── 状态文件（临时运行产物）────────────────────────────────────────────────
-# 串行执行状态
+# ─── 运行时临时产物（不提交）──────────────────────────────────────────────────
+# 状态追踪
 *-state.json
 *-state.json.bak
 hang-state.json
 hang-state.json.bak
 hammer-state.json
 
-# 评审产物
+# 评审产物（运行 /夯 后生成的临时文件）
 red-*.md
 blue-*.md
 green-*.md
 *-alignment.md
 *-review.md
 *-result.md
+*-tdd-cycle-*.md
+*-red-report.md
 
-# 门控文件
+# 门控/覆盖率输出
 gate-*.json
 gate-*.md
+coverage/
+.nyc_output/
 
 # 临时输出
 tmp-*.md
@@ -90,3 +98,8 @@ Thumbs.db
 # ─── 系统文件─────────────────────────────────────────────────────────────────
 .gitignore.local
 .gitignore.sensitive
+
+# ─── 设计文档/迁移方案（内部文档，不提交）─────────────────────────────────────
+docs/TDD融入夯技能升级方案.md
+*通用适配方案*.md
+*实施计划*.md

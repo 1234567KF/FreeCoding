@@ -20,7 +20,7 @@ hooks:
   before_remove: ""
   timeout_ms: 60000
 agent:
-  max_concurrent_agents: 12
+  max_concurrent_agents: 15
   max_turns: 20
   max_retry_backoff_ms: 300000
   max_retry_attempts: 3
@@ -69,3 +69,13 @@ best possible solution following your team's philosophy:
 - If you encounter ambiguity, record it as `[ASSUMPTION:CRITICAL]` with a proposed default
 - Stage outputs must be self-contained — the next stage agent only sees your output file
 - Use lean-ctx compressed reads for upstream artifacts to save tokens
+
+## TDD Rules
+
+1. 测试先行：编码前必须先读 Stage 0.5 产出的测试文件
+2. RED 验证：确认测试全部失败（预期状态）
+3. GREEN 实现：写最小代码让测试通过，禁止超前实现
+4. 微循环粒度：每次处理 1-3 个测试用例
+5. 禁止先实现后补测试：检测到则删除代码重新从 RED 开始
+6. 覆盖率保持：重构时不得降低分支覆盖率
+7. `--no-tdd` 回退：仅用于纯文档/非编码任务

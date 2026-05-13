@@ -225,6 +225,7 @@ Write-Host "`n=== 可选全局依赖 ===" -ForegroundColor Cyan
 $deps = @(
     @{ Name = "lean-ctx";   Check = "lean-ctx";      Install = "npm install -g lean-ctx" }
     @{ Name = "opencli";    Check = "opencli";       Install = "npm install -g @jackwener/opencli" }
+    @{ Name = "3pio";       Check = "3pio";          Install = "npm install -g @heyzk/3pio" }
 )
 
 foreach ($dep in $deps) {

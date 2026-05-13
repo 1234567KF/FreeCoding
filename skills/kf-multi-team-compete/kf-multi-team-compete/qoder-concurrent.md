@@ -116,7 +116,7 @@ Agent(subagent_type="kf-hammer-green-team", prompt=<共享前缀 + 绿队后缀>
 ...
 
 [执行清单]
-Stage 0 对齐 → Stage 1 规格 → Stage 2 编码 → Stage 3 QA → Stage 4 代码审查 → Stage 5 前端设计
+Stage 0 对齐 → Stage 0.5 测试设计先行 → Stage 1 规格 → Stage 2 TDD微循环(2a RED→2b GREEN→2c REFACTOR) → Stage 3 QA+覆盖率 → Stage 3.5 运行时验证 → Stage 4 代码审查+TDD审计 → Stage 5 前端设计
 
 [状态同步铁律]
 每完成一个 stage，执行：
@@ -238,6 +238,7 @@ node {IDE_ROOT}/helpers/orchestrator-qoder.cjs concurrent-status
 | 红队 | `agents/kf-hammer-red-team.md` | `.qoder/agents/`, `.claude/agents/` | `.cursor/rules/*.mdc` | `.trae/rules/`, `.windsurf/rules/` | 激进创新 Stage 0→5 |
 | 蓝队 | `agents/kf-hammer-blue-team.md` | 同上 | 同上 | 同上 | 稳健工程 Stage 0→5 |
 | 绿队 | `agents/kf-hammer-green-team.md` | 同上 | 同上 | 同上 | 安全保守 Stage 0→5 |
+| QA 测试设计 | `agents/kf-hammer-qa-designer.md` | 同上 | 同上 | 同上 | Stage 0.5 测试设计先行（TDD） |
 | 裁判 | `agents/kf-hammer-judge.md` | 同上 | 同上 | 同上 | 5 维加权评分 |
 | 对抗 | `agents/kf-hammer-adversary.md` | 同上 | 同上 | 同上 | 8 维度魔鬼代言人 |
 

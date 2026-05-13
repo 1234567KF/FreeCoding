@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node .qoder/*)",
+      "Bash(npx *)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  },
+  "verbose": true,
+  "model": "deepseek-v4-flash",
+  "modelPreferences": {
+    "preferred": "deepseek-v4-flash",
+    "fallbacks": [
+      "deepseek-v4-pro"
+    ],
+    "automaticallySwitch": true
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node helpers/hooks/model-router-hook.cjs",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "DEEPSEEK_API_KEY": "${DEEPSEEK_API_KEY}",
+    "MINIMAX_API_KEY": "${MINIMAX_API_KEY}",
+    "KIMI_API_KEY": "${KIMI_API_KEY}",
+    "AI_CODING_VERBOSE": "1"
+  }
+}

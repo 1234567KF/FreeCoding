@@ -1,8 +1,10 @@
-# FreeCoding —  AI 编程智驾框架
+# FreeCoding — AI 编程智驾框架
 
 ## 概述
 
- FreeCoding ，源于基于claude code的ChronoCoding 是 AI 编程智驾框架。你（AI Agent）正在阅读这份说明。
+FreeCoding，源于基于 Claude Code 的 ChronoCoding，是 AI 编程智驾框架的通用适配版。你（AI Agent）正在阅读这份说明。
+
+**Qoder 用户**：仓库已包含 `.qoder/` 完整配置（含 qoder.md、settings.json、agents/、rules/），clone 后即可直接使用，无需运行安装脚本。其他 IDE 用户请运行 Step 2 安装脚本。
 
 ### 核心能力
 
@@ -157,6 +159,20 @@ node {IDE_ROOT}/helpers/cache-warmup.cjs mark
 
 # 验证
 node {IDE_ROOT}/helpers/harness-gate-check.cjs --skill kf-spec --stage review --required-sections "## Acceptance Criteria"
+
+# TDD 门控（Stage 0.5 / 2a / 2b / 2）
+node {IDE_ROOT}/helpers/tdd-gate-check.cjs --stage 0.5 --team red
+node {IDE_ROOT}/helpers/tdd-gate-check.cjs --stage 2 --team red
+node {IDE_ROOT}/helpers/tdd-gate-check.cjs --scan-tdd-compliance --team red
+
+# 覆盖率门控（Stage 3）
+node {IDE_ROOT}/helpers/coverage-reporter.cjs gate --team red --min-branches 70
+
+# 回归流水线
+node {IDE_ROOT}/helpers/hammer-regression.cjs --team red [--with-db]
+
+# 三队产物合并
+node {IDE_ROOT}/helpers/hammer-merge.cjs --dirs red-05-tests blue-05-tests green-05-tests --output merged-tests/
 ```
 
 ---

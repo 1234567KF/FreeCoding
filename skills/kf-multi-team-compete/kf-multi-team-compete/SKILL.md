@@ -177,13 +177,16 @@ graph:
 产物写入文件后进入下一阶段。
 
 ```
-Pre-Stage     Stage 0        Stage 1        Stage 2        Stage 3        Stage 3.5      Stage 4        Stage 5
- 物料准备  →   需求对齐  →    架构设计   →    编码实现   →    集成测试   →    运行时验证 →    代码审查   →    方案汇总
- (Team Lead)   (前端+后端专家) (前端+后端专家) (前端+后端专家) (QA 专家)       (QA 专家)      (Code Review)  (前端设计师)
-    │              │              │              │              │              │              │              │
-    ▼              ▼              ▼              ▼              ▼              ▼              ▼              ▼
- PRD文档       对齐记录      架构方案       代码产物       测试报告       运行报告       审查报告       团队方案
+Pre-Stage   Stage 0      Stage 0.5       Stage 1      Stage 2          Stage 3          Stage 3.5      Stage 4        Stage 5
+ 物料准备 →  需求对齐  →  测试设计先行 →  架构设计  →  TDD微循环     →  集成测试       →  运行时验证 →  代码审查   →  方案汇总
+ (Team Lead) (前端+后端)  (QA测试设计)    (前端+后端)  2a RED→2b GREEN→2c REFACTOR  (QA专家+覆盖率)   (QA专家)     (Code Review)  (前端设计师)
+    │           │              │              │              │               │              │              │              │
+    ▼           ▼              ▼              ▼              ▼               ▼              ▼              ▼              ▼
+ PRD文档    对齐记录     测试文件+场景矩阵  架构方案     代码+TDD报告     测试+覆盖率报告  运行报告       审查报告       团队方案
 ```
+
+> **TDD 默认化**：从 v2.0 起，TDD 是默认工作流。编码前必须先有测试文件（Stage 0.5 产出），
+> 编码必须遵循 RED→GREEN→REFACTOR 微循环。保留 `--no-tdd` 紧急回退（仅用于纯文档/非编码任务）。
 
 ### Pre-Stage — 需求物料准备（条件触发）
 
@@ -219,8 +222,52 @@ Pre-Stage     Stage 0        Stage 1        Stage 2        Stage 3        Stage 
   3. 若发现关键歧义（影响架构选型），记录为 `[ASSUMPTION:CRITICAL]`，不影响继续推进
   4. MUST NOT 向用户提问或阻塞流水线
 - **产出**：`{team}-00-alignment.md` — 需求理解、边界确认、技术约束、补充假设清单（如有）
-- **门控**：对齐记录产出后自动进入 Stage 1（不等待用户确认）
+- **门控**：对齐记录产出后自动进入 Stage 0.5（不等待用户确认）
 - **三队约束**：三队共享同一份假设基线，确保方案可比；各自只能补充假设，不能推翻基线
+
+### Stage 0.5 — 测试设计先行（TDD Pre-Flight）
+
+> **核心理念**：测试先行是 TDD 的核心原则。QA 测试设计专家在编码之前工作，
+> 从需求文档中推导测试场景，生成可执行的测试代码。
+> **通用串行模式**：Stage 0 → Stage 0.5 → Stage 1 顺序执行。
+> **Qoder 并发模式**：Stage 0.5 与 Stage 1 可 fan-out 并行执行（见 qoder-concurrent.md）。
+
+- **执行者**：QA 测试设计专家 agent（独立角色，与 Stage 1 架构设计上下文隔离）
+- **输入**：PRD.md / Spec / Stage 0 对齐记录
+- **动作**：
+  1. **推导测试场景** — 从 PRD/Spec 推导：
+     - 功能流程场景（Happy Path × N）
+     - 规则边界场景（Given-When-Then × N）
+     - ER 关系场景（多实体交互 × N）
+     - 异常场景（空数据/并发/越权/超时 × N）
+  2. **按测试奖杯策略分层**：
+     - 集成测试 50-60%（Vitest + Supertest）
+     - 组件测试 30-40%（Testing Library）
+     - E2E 测试 10-20%（Playwright）
+  3. **生成可执行测试文件** — 完整断言（**禁止 it.todo**），可独立运行
+  4. **RED 验证** — 测试编译成功 + 全部预期失败（因为实现还不存在）
+- **产出**：
+  - `{team}-05-tests/` — 可执行测试文件目录
+  - `{team}-05-scenarios.json` — 测试场景矩阵（JSON）
+  - `{team}-05-red-report.md` — RED 验证报告
+- **门控**：测试编译通过 ✅ | 全部预期失败（RED）✅ | 覆盖 3 维度（角色×权限×数据状态）✅
+- **门控命令**：`node {IDE_ROOT}/helpers/tdd-gate-check.cjs --stage 0.5 --team {team}`
+- **产出传递**：Stage 0.5 测试文件 + Stage 1 架构方案 → 共同作为 Stage 2 编码 agent 的输入
+
+**QA 测试设计专家 Prompt 约束**：
+
+```markdown
+## 角色
+你是 QA 测试设计专家，负责从需求文档中推导测试场景，生成可执行的测试代码。
+你在编码之前工作——测试先行是 TDD 的核心原则。
+
+## 质量要求
+- 每场景断言写完整（禁止 it.todo）
+- 覆盖 3 角色 × 3 权限 × 3 数据状态
+- 覆盖 Happy Path + 错误路径
+- 测试可运行（即使预期失败）
+- 上下文隔离：不看实现代码，只看 PRD/Spec/对齐记录
+```
 
 ### Stage 1 — 架构设计
 
@@ -230,31 +277,66 @@ Pre-Stage     Stage 0        Stage 1        Stage 2        Stage 3        Stage 
 - **产出**：`{team}-01-architecture.md` — 架构图、模块划分、技术选型理由
 - **门控**：架构方案无歧义，关键决策点已标注
 
-### Stage 2 — 编码实现
+### Stage 2 — TDD 微循环（RED→GREEN→REFACTOR）
 
-- **执行者**：前端专家 + 后端专家 agent（原全栈开发，协作编码）
-- **输入**：Stage 1 架构方案
+> **核心变更**：从自由编码改为 TDD 驱动的微循环。编码前必须先读测试文件（Stage 0.5 产出），
+> 每次只写刚好能让测试通过的代码，循环直到全部 GREEN。
+
+- **执行者**：前端专家 + 后端专家 agent
+- **输入**：Stage 1 架构方案 + Stage 0.5 测试文件
 - **动作**：
-  1. 前端专家负责 UI/交互实现，后端专家负责 API/数据层/业务逻辑实现
-  2. **MUST** 编码完成后执行 coding checklist：`ctx_read {IDE_ROOT}/rules/mvp-coding-checklist.md`
-  3. 逐项自检 A-J 类型（A/B/D/J 为 P0 必须检查），修复发现的问题
-  4. **--with-tests 模式**：每个函数/组件同步生成测试骨架文件。规则：
-     - 白名单扩展名：`.tsx`, `.jsx`, `.ts`, `.js`, `.py`, `.go`
-     - 纯配置文件/类型定义/常量文件：跳过（不生成测试）
-     - 测试骨架：describe + it.todo 结构，标注 Given/When/Then
-     - 骨架可立即执行（不报语法错误），具体断言留空
-     - 命名约定：`{filename}.test.{ext}` 或 `{filename}_test.{ext}`
-- **产出**：代码文件 + 测试骨架文件（--with-tests 模式）+ `{team}-02-implementation.md`（含 checklist 自检结果）
-- **门控**：代码可编译/运行，无语法错误；checklist P0 项全部通过；--with-tests 模式下测试骨架文件存在且可执行
 
-### Stage 3 — 测试专家循环（Multi-Round Test Cycle）
+#### Stage 2a — RED 验证
 
-> **核心变更**：从一次性集成测试改为多轮闭环测试。测试专家准备多角色、多权限、多数据状态的测试场景，执行测试 → 出 issue_list → 开发 fix → 回归测试，上限 3 轮。
+1. 读取 Stage 0.5 的测试文件 `{team}-05-tests/`
+2. 确认全部测试失败（RED 是预期状态 — 实现代码还不存在）
+3. 确认失败信息有意义（非语法错误，而是断言失败）
+4. **门控**：测试失败 + 失败信息有意义 ✅
+5. **门控命令**：`node {IDE_ROOT}/helpers/tdd-gate-check.cjs --stage 2a --team {team}`
+
+#### Stage 2b — GREEN 实现
+
+1. 写**最小实现代码**让当前组测试通过
+2. **禁止超前实现** — 只写刚好能让测试通过的代码
+3. 每次处理 1-3 个测试用例（一组相关场景）
+4. 测试通过后输出 TDD 循环报告
+5. **门控**：当前组测试全部通过（GREEN）✅
+6. **门控命令**：`node {IDE_ROOT}/helpers/tdd-gate-check.cjs --stage 2b --team {team}`
+
+#### Stage 2c — 重构优化（每轮可选但推荐）
+
+1. 保持测试 GREEN，优化代码结构和质量
+2. 运行 `ctx_read {IDE_ROOT}/rules/mvp-coding-checklist.md` 逐项自检 A-K 类型
+3. A/B/D/J 为 P0 必须检查，K（TDD 合规）为 P0 必须检查
+4. **门控**：测试保持 GREEN + checklist P0 通过 ✅
+5. 回到 Stage 2a 处理下一组测试 → 循环直到全部 GREEN
+
+#### TDD 硬性规则（不可违反）
+
+1. **测试先行**：写实现代码前，MUST 先读取 `{team}-05-tests/` 中的测试文件
+2. **RED 验证**：确认测试运行全部失败（预期 RED 状态）
+3. **GREEN 实现**：写最小实现代码让测试通过，禁止超前实现
+4. **微循环粒度**：每次处理 1-3 个测试用例，通过后进入下一组
+5. **禁止先实现后补测试**：检测到则删除代码重新从 RED 开始
+6. **覆盖率保持**：重构时不得降低分支覆盖率
+7. **报告**：每 Cycle 输出 `{team}-02-tdd-cycle-N.md`
+
+- **产出**：代码文件 + `{team}-02-implementation.md`（含 checklist 自检 + TDD 循环记录）
+- **门控**：全部测试 GREEN ✅ | checklist P0(A/B/D/J/K)通过 ✅ | 代码可编译/运行 ✅
+- **门控命令**：`node {IDE_ROOT}/helpers/tdd-gate-check.cjs --stage 2 --team {team}`
+- **`--no-tdd` 回退**：纯文档/非编码任务可跳过 TDD 微循环，直接按旧模式编码（但 MUST 说明跳过原因）
+
+### Stage 3 — 测试专家循环 + 覆盖率量化门控（Multi-Round Test Cycle）
+
+> **核心变更**：从一次性集成测试改为多轮闭环测试 + 覆盖率量化门控。
+> 测试专家验证 Stage 0.5 测试的完整性，补充遗漏场景，收集覆盖率数据。
 >
 > **自动化支持**：使用 `node {IDE_ROOT}/helpers/test-cycle-manager.cjs` 管理测试矩阵构建、轮次控制、问题追踪和修复记录。
+> **覆盖率采集**：使用 `node {IDE_ROOT}/helpers/coverage-reporter.cjs` 采集并门控覆盖率数据。
 
 - **执行者**：QA 专家 agent
-- **输入**：Stage 2 代码产物 + Stage 2 checklist 自检结果
+- **输入**：Stage 2 代码产物 + Stage 2 checklist 自检结果 + Stage 0.5 测试文件
+- **关注点转移**：从"发现 Bug"变为"验证覆盖率 + 增补边界场景 + 确认 Stage 0.5 测试完整性"
 - **测试场景准备（MUST，不可跳过）**：
 
 #### 3.1 测试矩阵构建
@@ -331,6 +413,34 @@ Round 3: 最终回归
   - `{team}-03-screenshots/` — UI 截图目录
 - **门控**：核心 Happy Path 通过；checklist A/B/D/F/G/J 类专项测试通过；无 UNRESOLVED P0（或已达上限带警告通过）
 
+#### 3.6 覆盖率量化门控（TDD 新增）
+
+运行 `npx vitest run --coverage`（或等价命令）采集覆盖率数据：
+
+| 层级 | 指标 | 阈值 | 工具 |
+|------|------|------|------|
+| L1 | 行覆盖 | ≥ 80% | Vitest --coverage |
+| L2 | 分支覆盖 | ≥ 70% | Vitest coverage.branches |
+| L3 | 函数覆盖 | ≥ 65% | Vitest coverage.functions |
+| L4 | 变异测试（选装） | ≥ 60% | Stryker |
+
+**覆盖率数据流程**：
+
+```
+Stage 2 编码完成
+  ↓
+Stage 3 运行测试 + --coverage
+  ↓
+node {IDE_ROOT}/helpers/coverage-reporter.cjs collect --team {team}
+  ↓
+Gate: 分支覆盖 ≥ 70%?
+  ├── ✅ 是 → 继续 Stage 3.5
+  ├── ⚠️ 50-70% → P1 告警，不阻断，记录到审查报告
+  └── ❌ < 50% → 退回 Stage 2 补充未覆盖分支
+```
+
+**门控命令**：`node {IDE_ROOT}/helpers/coverage-reporter.cjs gate --team {team} --min-branches 70`
+
 ### Stage 3.5 — 运行时验证（Runtime Verification）
 
 > **核心理念**：对标 OpenGame "真正跑起来"——不只看测试报告，要实际启动应用做端到端验证。
@@ -390,16 +500,25 @@ Round 3: 最终回归
 
 - **门控**：P0 错误数为 0 方可进入 Stage 4；有 P0 错误则自动回退 Stage 2 编码
 
-### Stage 4 — 代码审查
+### Stage 4 — 代码审查 + TDD 合规审计
 
 - **执行者**：集成测试 agent
-- **输入**：Stage 2 代码 + Stage 3 测试报告 + Stage 3.5 运行时报告
+- **输入**：Stage 2 代码 + Stage 3 测试报告 + Stage 3 覆盖率数据 + Stage 3.5 运行时报告
 - **动作**：
   1. 调用 `kf-code-review-graph` 生成依赖图谱、涟漪效应分析、审查优先级
   2. **MUST** 核对 checklist 执行完整性：开发自检是否真实执行？测试是否覆盖了 checklist 类型？
-  3. 发现遗漏的 checklist 项 → 标记为 error，回退 Stage 2/3 修复
-- **产出**：`{team}-04-review-report.md`（含 checklist 审计结论）
-- **门控**：无 error 级别问题；warning 级别已记录并评估；checklist 审计通过（自检+测试+审查三重确认）
+  3. **TDD 合规审计**（新增）：
+     - K1: 编码前是否有测试文件（Stage 0.5 产出存在性检查）
+     - K2: RED 验证是否通过（Stage 2a 门控记录）
+     - K3: GREEN 实现是否最小（检查是否有超出测试范围的代码）
+     - K4: 覆盖率是否达标（Stage 3 覆盖率数据）
+     - K5: 编码顺序是否合规（是否先实现后补测试）
+     - K6: 测试断言是否完整（禁止 it.todo / 空断言）
+     - K7: QA-编码解耦（测试设计 Agent 和编码 Agent 是否上下文隔离）
+  4. **测试质量审查**（新增）：断言是否有效？是否有 gaming 行为？（如只测 Happy Path 跳过边界）
+  5. 发现遗漏的 checklist 项 → 标记为 error，回退 Stage 2/3 修复
+- **产出**：`{team}-04-review-report.md`（含 checklist 审计结论 + TDD 合规审计结论）
+- **门控**：无 error 级别问题；warning 级别已记录并评估；checklist 审计通过（自检+测试+审查三重确认）；TDD 合规 K1/K2/K5 通过
 
 ### Stage 5 — 方案汇总
 
@@ -413,11 +532,42 @@ Round 3: 最终回归
 当为三队分配任务时，通过状态文件定义阶段依赖 DAG（串行执行顺序）：
 
 ```
-Stage0 → Stage1 → Stage2 → Stage3 → Stage3.5 → Stage4 → Stage5
+Stage0 → Stage0.5 → Stage1 → Stage2(2a→2b→2c循环) → Stage3(含覆盖率门控) → Stage3.5 → Stage4(含TDD审计) → Stage5
 ```
 
 每个 agent 完成当前阶段后自动触发下一阶段。阶段失败则阻塞该团队流水线，
 其他团队流水线不受影响。
+
+### 完整门控链
+
+```
+Stage 0.5 — 测试设计先行
+  └── Gate 0.5: 测试编译成功 + 全部 RED ✅
+       │
+Stage 2a — RED 验证
+  └── Gate 2a: 测试预期失败 ✅
+       │
+Stage 2b — GREEN 实现
+  └── Gate 2b: 测试全部通过（GREEN）✅
+       │
+Stage 2c — 重构优化
+  └── Gate 2c: 测试保持 GREEN + 覆盖率不降 ✅
+       │
+Stage 3 — 集成测试 + 覆盖率
+  └── Gate 3: 所有测试通过 + 分支覆盖≥70% ✅
+       │
+Stage 3.5 — 运行时验证
+  └── Gate 3.5: P0错误=0 ✅
+       │
+Stage 4 — 代码审查 + TDD 合规
+  └── Gate 4: 回归测试 + 审查无 Error + TDD K1/K2/K5 通过 ✅
+```
+
+**违规处理**：
+- 先写代码后写测试 → 自动删除代码，重新从 RED 开始
+- 测试覆盖率 < 50% → 退回 Stage 2 补充未覆盖分支
+- 覆盖率 50-70% → P1 告警，不阻断
+- TDD 合规 K1/K2/K5 未通过 → 退回对应阶段修复
 
 ### 阶段间产物传递（Token 优化）
 
@@ -426,11 +576,14 @@ Stage0 → Stage1 → Stage2 → Stage3 → Stage3.5 → Stage4 → Stage5
 | 上游产物 | 读取方式 | 说明 |
 |---------|---------|------|
 | `{team}-00-alignment.md` | `ctx_read(path, "reference")` | 对齐记录 — 仅取关键假设和约束 |
+| `{team}-05-tests/` | `ctx_read(path, "map")` | Stage 0.5 测试文件 — 仅取文件清单和场景矩阵 |
+| `{team}-05-scenarios.json` | `ctx_read(path, "reference")` | 测试场景矩阵 — 仅取场景 ID 和类型 |
 | `{team}-01-architecture.md` | `ctx_read(path, "map")` | 架构方案 — 仅取模块划分和接口契约 |
 | `{team}-02-implementation.md` | `ctx_read(path, "aggressive")` | 实现报告 — 最大压缩，仅取文件清单和关键片段 |
+| `{team}-02-tdd-cycle-*.md` | `ctx_read(path, "aggressive")` | TDD 循环报告 — 仅取最终状态 |
 | `{team}-03-test-report.md` | `ctx_read(path, "reference")` | 测试报告 — 仅取失败用例和覆盖缺口 |
 | `{team}-035-runtime-report.md` | `ctx_read(path, "reference")` | 运行报告 — 仅取错误等级和阻断项 |
-| `{team}-04-review-report.md` | `ctx_read(path, "reference")` | 审查报告 — 仅取 error 级别问题 |
+| `{team}-04-review-report.md` | `ctx_read(path, "reference")` | 审查报告 — 仅取 error 级别问题 + TDD 合规结论 |
 | `{team}-05-final.md` | `ctx_read(path, "map")` | 最终方案 — 仅取方案概述和关键决策 |
 
 **原因**：阶段产物可能包含大量代码片段和详细描述，全文读入会浪费 token。

@@ -230,7 +230,7 @@ done
 echo ""
 echo "=== 可选全局依赖 ==="
 
-for dep in "lean-ctx:lean-ctx:npm install -g lean-ctx" "opencli:opencli:npm install -g @jackwener/opencli"; do
+for dep in "lean-ctx:lean-ctx:npm install -g lean-ctx" "opencli:opencli:npm install -g @jackwener/opencli" "3pio:3pio:npm install -g @heyzk/3pio"; do
     IFS=':' read -r NAME CMD INSTALL <<< "$dep"
     if command -v "$CMD" &>/dev/null; then
         echo "  [✓] $NAME — 已安装"
