@@ -1,4 +1,4 @@
-﻿---
+---
 name: kf-multi-team-compete
 description: |
   多团队竞争评审（中文别称：夯）。红蓝绿三队按 Pipeline 流水线串行执行，

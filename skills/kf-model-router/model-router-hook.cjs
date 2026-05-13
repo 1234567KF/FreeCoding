@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 /**
  * smart-router-hook.cjs — kf-model-router PreToolUse Hook
  *
@@ -26,7 +26,7 @@ const fs = require('fs');
 const SKILLS_DIR = path.resolve(__dirname, '..');
 
 function parseFrontmatter(content) {
-  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!match) return { metadata: {} };
   const yaml = match[1];
   const result = { metadata: {} };
@@ -61,7 +61,7 @@ function getSkillName() {
   const idx = process.argv.indexOf('--skill');
   if (idx !== -1 && process.argv[idx + 1]) return process.argv[idx + 1];
 
-  // 2. 环境变量
+  // 2. 环境变量（Claude Code 格式）
   const env = process.env.CLAUDE_TOOL_USE_REQUEST ||
               process.env.CLAUDE_EXTRA_CONTEXT;
   if (env) {
@@ -72,11 +72,14 @@ function getSkillName() {
     } catch {}
   }
 
-  // 3. stdin
+  // 3. stdin（Qoder PreToolUse hook 格式 or Claude Code 格式）
   try {
     const buf = fs.readFileSync(0, 'utf-8').trim();
     if (buf) {
       const p = JSON.parse(buf);
+      // Qoder format: { tool_name: "Skill", tool_input: { skill: "kf-xxx" } }
+      if (p?.tool_input?.skill) return p.tool_input.skill;
+      // Claude Code format: { skill: "kf-xxx" } or { args: { skill: "kf-xxx" } }
       return p?.skill || p?.args?.skill || null;
     }
   } catch {}

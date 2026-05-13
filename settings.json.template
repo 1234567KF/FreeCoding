@@ -16,7 +16,21 @@
     "fallbacks": [
       "deepseek-v4-pro"
     ],
-    "automaticallySwitch": false
+    "automaticallySwitch": true
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node helpers/hooks/model-router-hook.cjs",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
   },
   "env": {
     "DEEPSEEK_API_KEY": "${DEEPSEEK_API_KEY}",

@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 /**
  * kf-model-router Hook — Skill 模型路由（通用 IDE 手动触发版）
  *
@@ -71,7 +71,7 @@ function getEnhancedModules() {
 }
 
 function parseFrontmatter(content) {
-  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!match) return {};
   const yaml = match[1];
   const result = {};
@@ -129,16 +129,24 @@ function parseFrontmatter(content) {
 }
 
 function findSkillMd(skillName) {
+  // 直接路径: skills/<name>/SKILL.md
   const dir = path.join(SKILLS_DIR, skillName);
   const mdPath = path.join(dir, "SKILL.md");
   if (fs.existsSync(mdPath)) return mdPath;
+
+  // 嵌套路径: skills/<name>/<name>/SKILL.md（本仓库结构）
+  const nestedPath = path.join(dir, skillName, "SKILL.md");
+  if (fs.existsSync(nestedPath)) return nestedPath;
+
   return null;
 }
 
 function getSkillName() {
+  // 1. 命令行参数
   const idx = process.argv.indexOf("--skill");
   if (idx !== -1 && process.argv[idx + 1]) return process.argv[idx + 1];
 
+  // 2. 环境变量（Claude Code 格式）
   const env = process.env.CLAUDE_TOOL_USE_REQUEST ||
               process.env.CLAUDE_EXTRA_CONTEXT;
   if (env) {
@@ -149,10 +157,14 @@ function getSkillName() {
     } catch {}
   }
 
+  // 3. stdin（Qoder PreToolUse hook 格式 or Claude Code 格式）
   try {
     const buf = fs.readFileSync(0, "utf-8").trim();
     if (buf) {
       const p = JSON.parse(buf);
+      // Qoder format: { tool_name: "Skill", tool_input: { skill: "kf-xxx" } }
+      if (p?.tool_input?.skill) return p.tool_input.skill;
+      // Claude Code format: { skill: "kf-xxx" } or { args: { skill: "kf-xxx" } }
       return p?.skill || p?.args?.skill || null;
     }
   } catch {}
