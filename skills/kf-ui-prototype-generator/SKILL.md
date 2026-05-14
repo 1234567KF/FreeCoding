@@ -1,13 +1,12 @@
 ---
 name: kf-ui-prototype-generator
 description: >-
-  Generate zero-dependency, theme-switchable HTML prototypes from PRD documents
-  that embed all 6 major design systems (Ant Design, Element Plus, Arco Design,
-  Semi Design, TDesign, Built-in) as inline CSS variables. Every prototype ships
-  with a built-in theme switcher for instant visual comparison.
-  Triggers: "生成原型", "UI原型", "页面原型", "HTML原型", "prototype".
+  Load when user wants to generate zero-dependency HTML UI prototypes from PRD
+  documents with embedded 暗门注释 (7-layer business annotation system with L0-L6
+  tab navigation in a resizable drawer). Triggers: "生成原型", "UI原型", "页面原型",
+  "HTML原型", "prototype", "原型生成", "暗门注释", "页面 mockup".
 metadata:
-  pattern: generator
+  pattern: generator + pipeline
   domain: ui-prototype
 integrated-skills:
   - kf-alignment
@@ -15,94 +14,67 @@ recommended_model: flash
 graph:
   dependencies:
     - target: kf-alignment
-      type: workflow  # 原型后对齐
-
+      type: workflow
 ---
 
-# UI Prototype Generator — Self-Contained, Theme-Switchable
+# UI Prototype Generator — Annotation-Driven HTML Prototypes
 
-> Red Team Reconstruction: Zero external dependencies. Six design systems, one HTML. Theme-switchable out of the box.
+> Zero external dependencies. One clean design system. Every prototype embeds a 7-layer annotation drawer with L0-L6 tab navigation — developers and testers have zero remaining questions.
 
-Generate high-fidelity HTML prototypes from PRD documents. This is a **self-contained** skill — all design system variables, component decision rules, and generation templates are embedded directly. No `assets/`, no `references/`, no CDN dependencies.
-
-Every generated HTML ships with a **built-in theme switcher** — toggle between Ant Design, Element Plus, Arco Design, Semi Design, TDesign, and Built-in themes with one click.
+Generate high-fidelity HTML prototypes from PRD documents. Every generated HTML ships with a **built-in annotation drawer** — Ctrl+B to toggle a resizable right-side panel with L0-L6 tabbed annotations.
 
 ---
 
 ## Architecture Overview
 
 ```
-Phase 0: Intake          Phase 1: Build            Phase 2: Verify
-─────────────────────     ──────────────────────   ─────────────────
-Collect Inputs       →    Theme Injection           Self-Check
-Project Detect            HTML Skeleton + CSS       Quality Review
-PRD Parse                 Interaction Layer         Harness Gate
-Component Decision        Theme Switcher Widget     Auto-Repair
-    │                             │                       │
-    └───── Gate 1 ───────────────┴────── Gate 2 ─────────┘
+Phase 0: Intake          Phase 1: Build            Phase 1.5: Annotate    Phase 2: Verify
+─────────────────────     ──────────────────────   ────────────────────   ─────────────────
+Collect Inputs       →    CSS Variable Injection    Load Annotation Spec   Self-Check
+Project Detect            HTML Skeleton + CSS       Generate 7-Layer Ann.  Quality Review
+PRD Parse                 Interaction Layer         Embed Tab Drawer UI    Harness Gate
+Component Decision        Responsive Breakpoints    Wire Badge Anchors     Auto-Repair
+    │                             │                       │                       │
+    └───── Gate 1 ───────────────┴────── Gate 1.5 ────────┴────── Gate 2 ─────────┘
 ```
 
 ---
 
-## Phase 0 — Intake (Inputs + Decisions)
+## Phase 0 — Intake
 
 ### Step 0.1 — Collect Required Inputs
-
-Confirm all required parameters. Ask for missing items one at a time.
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | PRD document | Yes | Reference via `@file` |
 | Prototype mode | optional | **Single-page** (default) or **Multi-page** |
 | Dev scenario | optional | **New project** (default) or **Iteration** |
-| Page name | Yes | Target page name (single) or main page name (multi) |
+| Page name | Yes | Target page name |
 | Page list | optional | Multi-page only. Auto-detect from PRD if omitted |
 | Output path | optional | Relative to workspace root, e.g. `prototypes/` |
-| Design theme | optional | antd (default) / element / arco / semi / tdesign / none |
 | Page type | optional | List / Form / Detail / Dashboard / Composite |
-| Device target | optional | **web** (default) or **mobile** — determines responsive breakpoints and layout density |
-| Theme context | optional | **auto** (default) / **admin** / **client-portal** / **public-site** / **mobile-app** — maps to recommended theme |
-
-**Theme Context Mapping (when Theme Context = auto or specified):**
-
-| Context | Recommended Theme | Rationale | Layout Preference |
-|---------|------------------|-----------|-------------------|
-| admin | antd | Admin panels traditionally use Ant Design | Dense layout, full sidebar, wide tables |
-| client-portal | Element Plus | Client-facing portals prefer Element's cleaner look | Card-based content, moderate density |
-| public-site | Built-in (none) | No vendor lock-in for public-facing sites | Hero sections, centered content |
-| mobile-app | Semi Design | Mobile-optimized components, touch-friendly | Bottom nav, full-width cards, large touch targets |
-| auto | Detect from PRD language | "后台"/"admin" → antd, "门户"/"portal" → element | Auto-detect |
+| Device target | optional | **web** (default) or **mobile** |
 
 ### Step 0.2 — Project Context Detection
 
-After collecting parameters, scan the workspace:
-
-1. Search for directories with page-level component files (`.vue`, `.tsx`, `.jsx`, `.dart`, `.swift`)
-2. Reference framework config files (`vite.config.*`, `next.config.*`, `nuxt.config.*`)
+1. Search for page-level component files (`.vue`, `.tsx`, `.jsx`, etc.)
+2. Reference framework config files (`vite.config.*`, `next.config.*`)
 3. Identify route configuration files for page directory locations
 
-- **Detected** → Enter **Context-Aware Mode**: "Detected project page directory `xxx/`, will generate based on existing page style."
-- **Not detected** → Ask: "No project page directory detected. Is this for an actual project? If so, specify via `@folder`."
+- **Detected** → Context-Aware Mode: generate based on existing page style
+- **Not detected** → Ask: "No project page directory detected. Is this for an actual project?"
   - User provides directory → Context-Aware Mode
-  - User says "standalone" → **Standalone Mode**, annotate: `<!-- Standalone prototype -->`
+  - User says "standalone" → Standalone Mode
 
-> Must not proceed to generation without completing project context detection.
+### Step 0.3 — Parse PRD
 
-### Step 0.3 — Parse PRD Page Requirements
+**Context-Aware Mode:** Scan project page directory — if page exists, renovation mode (only modify what PRD changes). If new page, scan similar pages for layout conventions.
 
-**Context-Aware Mode:** Scan project page directory:
-- Page exists? → Renovation: read existing template as baseline, only modify areas PRD explicitly requires
-- New page? → Scan similar pages for layout conventions, inherit their patterns
-
-**Standalone Mode:** Skip project analysis, generate from default template.
-
-Read the `@file` PRD document (use docx/pdf skill for `.docx`/`.pdf`):
-- Extract field definitions, interaction logic, business rules
-- For unclear PRD descriptions, log questions — do not assume
+**Standalone Mode:** Generate from default template.
 
 ### Step 0.4 — Component Decision Matrix
 
-Match PRD semantics to HTML components. Read by **row = user intent** → **column = data shape**:
+Match PRD semantics to HTML components:
 
 | Intent \ Data Shape | Single Value | List / Array | Hierarchical | Rich Content |
 |---------------------|-------------|--------------|--------------|--------------|
@@ -110,346 +82,156 @@ Match PRD semantics to HTML components. Read by **row = user intent** → **colu
 | Display / Read | Text / Badge / Tag | Table / List / Card.Grid | Tree / Collapse | Descriptions / Card |
 | Action / Trigger | Button / Link | Dropdown.Button | Menu | Modal.confirm / Drawer |
 | Filter / Query | Input.Search / Select | DatePicker.RangePicker | TreeSelect | — |
-| Navigate / Structure | Breadcrumb | Tabs / Steps | Menu / Pagination | Layout / Space |
-| Feedback / Alert | Tooltip / Popover | — | — | Modal / Drawer / Alert |
+| Navigate | Breadcrumb | Tabs / Steps | Menu / Pagination | Layout / Space |
+| Feedback | Tooltip / Popover | — | — | Modal / Drawer / Alert |
 
-**Note:** These names map to semantic CSS classes (`.ui-table`, `.ui-btn`, `.ui-card`) styled by theme variables — not a specific vendor library.
+Map to semantic CSS classes: `.ui-table`, `.ui-btn`, `.ui-card`, `.ui-modal`, `.ui-form`, `.ui-input`, `.ui-select`, `.ui-tag`, `.ui-badge`, `.ui-menu`, `.ui-tabs`, `.ui-breadcrumb`, `.ui-pagination`, `.ui-alert`.
 
-### Gate 1 — Intake Completion
+### Gate 1
 
-> Do not enter Phase 1 until all required parameters are collected, project context detection is complete, and PRD is parsed.
-
-Verification: `harness-gate-check.cjs --skill kf-ui-prototype-generator --stage gate1 --required-sections "页面名称" --forbidden-patterns "待定"`
+> Do not enter Phase 1 until all required parameters collected, project context detected, and PRD parsed.
 
 ---
 
-## Phase 1 — Build (HTML Generation)
+## Phase 1 — Build
 
-### Step 1.1 — Theme Selection & CSS Variable Injection
+### Step 1.1 — CSS Variable Injection
 
-Select design theme from user input or default to **antd**. The generated HTML will embed **all 6 themes** as CSS classes, allowing runtime switching.
-
-| Theme | Origin | Primary Color | Class Name |
-|-------|--------|--------------|------------|
-| Ant Design | Ant Group / Alibaba | #1890ff | `.theme-antd` |
-| Element Plus | Ele.me | #409eff | `.theme-element` |
-| Arco Design | ByteDance | #165dff | `.theme-arco` |
-| Semi Design | ByteDance / TikTok | #0077fa | `.theme-semi` |
-| TDesign | Tencent | #0052d9 | `.theme-tdesign` |
-| Built-in | Generic | #1677ff | `.theme-none` |
-
-**Architecture:** Every generated HTML uses a **two-layer variable system**:
-
-```
-Layer 1: Shared semantic variables (what HTML actually uses)
-  --primary, --bg, --text, --radius, --shadow ...
-
-Layer 2: Theme-specific overrides (6 theme classes map values to Layer 1)
-  .theme-antd { --primary: #1890ff; ... }
-  .theme-element { --primary: #409eff; ... }
-```
-
-The HTML skeleton references only `var(--primary)`, `var(--text)`, etc. Switching `.theme-antd` to `.theme-element` on `<html>` instantly re-themes the entire page.
-
-All 6 theme definitions are in **Appendix A**. Copy them verbatim into the generated HTML `<style>` block.
+Copy the `:root {}` block from `references/css-variables.md` into every `<style>` block. All components reference only `var(--primary)`, `var(--text)`, etc. — no hardcoded colors.
 
 ### Step 1.2 — Generate HTML Skeleton
 
-Use this structure for every generated prototype:
-
+Structure:
 ```html
 <!DOCTYPE html>
-<html lang="zh-CN" class="theme-antd">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{page_title}}</title>
   <style>
-    /* Layer 1: All 6 theme CSS variables (copy from Appendix A) */
-
-    /* Layer 2: Theme Switcher Widget CSS */
-
-    /* Layer 3: Skeleton Layout + Components (copy from Appendix B) */
-
-    /* Layer 4: Responsive Breakpoints */
-
-    /* Layer 5: Interaction Animations */
+    /* Layer 1: CSS Variables — from references/css-variables.md */
+    /* Layer 2: Skeleton CSS — from references/skeleton-css.md */
+    /* Layer 3: Responsive breakpoints */
+    /* Layer 4: Annotation Drawer — from references/anno-drawer-template.md */
   </style>
 </head>
 <body>
-  <!-- Theme Switcher Widget -->
-  <div class="theme-switcher" id="themeSwitcher">
-    <span class="theme-switcher-label">Theme</span>
-    <div class="theme-switcher-options">
-      <button class="theme-btn active" data-theme="theme-antd" style="--swatch:#1890ff" title="Ant Design">Ant</button>
-      <button class="theme-btn" data-theme="theme-element" style="--swatch:#409eff" title="Element Plus">Ele</button>
-      <button class="theme-btn" data-theme="theme-arco" style="--swatch:#165dff" title="Arco Design">Arc</button>
-      <button class="theme-btn" data-theme="theme-semi" style="--swatch:#0077fa" title="Semi Design">Semi</button>
-      <button class="theme-btn" data-theme="theme-tdesign" style="--swatch:#0052d9" title="TDesign">TD</button>
-      <button class="theme-btn" data-theme="theme-none" style="--swatch:#1677ff" title="Built-in">Base</button>
-    </div>
-  </div>
-
-  <!-- Page Content -->
   {{page_content}}
-
-  <script>
-    (function() {
-      var btns = document.querySelectorAll('.theme-btn');
-      btns.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          btns.forEach(function(b) { b.classList.remove('active'); });
-          btn.classList.add('active');
-          document.documentElement.className = btn.getAttribute('data-theme');
-        });
-      });
-    })();
-  </script>
+  {{annotation_drawer}}
 </body>
 </html>
 ```
 
-#### Generation Rules — Responsive Strategy
+#### Generation Rules
 
-**Device-aware responsive tiers:**
-- **web target**: Desktop-first with mobile fallback. Sidebar visible at ≥ 992px, collapses to hamburger at < 768px. Tables show full columns on desktop, collapse to card view on mobile.
-- **mobile target**: Mobile-first with tablet adaptation. Bottom tab navigation instead of sidebar. Full-width cards instead of tables. Touch targets ≥ 44px. Single-column layouts by default.
+**Responsive strategy** (device-aware):
+- **web target**: Desktop-first. Sidebar ≥992px, collapses <768px. Tables full columns on desktop, card view on mobile.
+- **mobile target**: Mobile-first. Bottom tab nav. Full-width cards. Touch targets ≥44px. Single-column layouts.
 
-**Responsive layout switching rules:**
-| Component | Web (≥ 992px) | Tablet (768-991px) | Mobile (< 768px) |
-|-----------|--------------|-------------------|-------------------|
-| Sidebar | Fixed, expanded | Collapsible icon nav | Hidden, hamburger menu |
-| Tables | Full columns, horizontal scroll | Key columns only + expand row | Convert to card list |
-| Search area | Multi-row inline | 2-column grid | Single column, stacked |
-| Cards | 3-4 per row | 2 per row | 1 per row, full width |
-| Modals | Centered, 520px | Centered, 80% width | Full-screen drawer |
-| Buttons | Inline with text | Text + icon | Icon-only or full-width |
+**Real data (no empty tables):**
+- 5-8 rows of realistic demo data with varied states (normal, disabled, pending, at least 3 tag colors)
+- Timestamps with realistic dates, not "2024-01-01"
+- Pre-fill search fields with example values
+- Empty state only shown via toggle, not default
 
-**Real Data Generation Rules — No Empty Tables:**
+**All buttons must be functional:**
+- Every button triggers a modal, navigation, toggle, or submission
+- Table action buttons (view/edit/delete) each open distinct modals
+- Buttons with no defined action: create confirmation modal "This feature is not yet implemented"
 
-1. **Table data MUST include 5-8 rows** of realistic demo data with varied states:
-   - Normal row, disabled/inactive row, pending review row
-   - Mix of tag statuses (some success, some warning, some error, some default)
-   - Timestamps with realistic dates (not "2024-01-01" placeholder)
-   - People names, amounts, progress values — not "xxx" or "test"
-2. **Status distribution**: At least 3 unique status values across rows, each with appropriate tag color
-3. **Search defaults**: Pre-fill search fields with example values to show form usage
-4. **Empty state**: Only shown when explicitly toggled via checkbox hack (not the default view)
-5. **Error state**: Include an `<!-- ERROR STATE DEMO -->` section that can be triggered via checkbox
+**Four mandatory state views:**
+1. Data state (default) — real content
+2. Empty state — `.ui-empty` with guidance, triggerable via checkbox
+3. Loading state — skeleton shimmer animation, triggerable via checkbox
+4. Error state — error alert + retry button, triggerable via checkbox
 
-**All Buttons Must Be Functional — No Dead Buttons Rule:**
-- Every button/link must trigger an action: open modal, navigate to page, toggle state, or submit form
-- Use checkbox/radio hacks for modals and drawers
-- Use `<a href>` for page navigation (even within single-page mode, link to `#section-id`)
-- Table action buttons (view/edit/delete) must each open their respective modal
-- "Add" / "Create" buttons must open creation form modals
-- Buttons with no defined action in PRD: create a confirmation modal with "This feature is not yet implemented"
-- Pagination page numbers must be clickable and change visible content
+**Iteration scenario:** Only modify what PRD explicitly changes. Preserve unchanged areas. Annotate: `<!-- [新增] -->` / `<!-- [变更] -->`.
 
-**Four Mandatory State Views — Every page must include:**
-1. **Data state** (default) — real content with varied rows
-2. **Empty state** — `.ui-empty` with illustration text, triggerable via checkbox: `<!-- EMPTY STATE: check #show-empty to see -->`
-3. **Loading state** — skeleton shimmer animation, triggerable via checkbox: `<!-- LOADING STATE: check #show-loading to see -->`
-4. **Error state** — error alert + retry button, triggerable via checkbox: `<!-- ERROR STATE: check #show-error to see -->`
+**Multi-page mode:** Create directory by menu module. Generate `shared.css` first. Output sidebar HTML once. `index.html` = lightweight shell only. Inter-page links via `<a href>`.
 
-Example state-switching pattern:
-```html
-<input type="radio" name="state" id="state-data" class="state-radio" checked hidden>
-<input type="radio" name="state" id="state-empty" class="state-radio" hidden>
-<input type="radio" name="state" id="state-loading" class="state-radio" hidden>
-<input type="radio" name="state" id="state-error" class="state-radio" hidden>
+### Step 1.3 — Interaction Simulation (CSS-Only)
 
-<div class="state-indicators">
-  <label for="state-data">Data</label>
-  <label for="state-empty">Empty</label>
-  <label for="state-loading">Loading</label>
-  <label for="state-error">Error</label>
-</div>
+Use CSS checkbox/radio hacks for all interactions (except annotation drawer JS). Full patterns in `references/interaction-patterns.md`.
 
-<!-- Content for each state, shown via :checked ~ -->
-```
+Quick reference:
+| Interaction | Technique |
+|-------------|-----------|
+| Modal | `input[type=checkbox]:checked ~ .modal-overlay { display: flex; }` |
+| Tabs | `input[type=radio]:checked ~ .tab-panel-n { display: block; }` |
+| Alert dismiss | Checkbox + `:checked + .ui-alert { display: none; }` |
 
-**Navigation Completeness Rules:**
-- All menu items in sidebar/navbar must link to a page (or open a modal explaining the section)
-- In multi-page mode, every module in the menu must have a corresponding HTML file
-- Breadcrumb items must be clickable links (except current page)
-- Table action buttons (View / Edit / Delete) must each trigger distinct modals with different content
-- Pagination links must navigate between page numbers (use ID anchors for single-page)
+### Step 1.5 — Source Traceability
 
-1. **Semantic CSS classes only**: Use `.ui-table`, `.ui-btn`, `.ui-card`, `.ui-modal`, `.ui-form`, `.ui-input`, `.ui-select`, `.ui-tag`, `.ui-badge`, `.ui-menu`, `.ui-tabs`, `.ui-breadcrumb`, `.ui-pagination`, `.ui-alert`, `.ui-drawer` — styled by theme variables
-2. **CSS variables for everything**: No hardcoded color, spacing, or radius values; use `var(--primary)`, `var(--spacing-md)`, `var(--radius-md)`
-3. **Responsive**: Mobile-first, `min-width` media queries using theme breakpoints
-4. **No inline styles for layout**: Must use classes
-5. **No external JS runtime**: Theme switcher is the only JS — lightweight inline script
-6. **Single file ≤ 800 lines**: Split into multiple files if exceeded
-7. **Zero external dependencies**: No CDN, no external fonts, no external assets
-
-#### Iteration Scenario
-
-When dev scenario is **Iteration**:
-- Use existing page structure as baseline, only reflect PRD changes
-- Annotate: `<!-- [新增] -->` / `<!-- [变更] -->`
-- Preserve unchanged areas exactly — no "optimization along the way"
-- If unsure, pause and ask
-
-#### Multi-Page Navigation
-
-When mode is **Multi-page**:
-1. Create directory structure by menu module
-2. Generate `shared.css` first (theme variables + skeleton) — all pages reference via `<link>`
-3. Output standard sidebar snippet once; all pages copy it verbatim (only changing active item)
-4. `index.html` = lightweight shell: project identity, description, quick links only
-5. Inter-page links use `<a href>` with relative paths — no JS navigation
-6. Iteration: only overwrite changed pages, preserve unchanged files
-
-### Step 1.3 — Theme Switcher Widget
-
-Every generated prototype includes a floating toolbar (top-right corner) for real-time theme switching. Default position: fixed, top-right, z-index 99999.
-
-The widget CSS and JS are included in the template above. Customization options:
-- Position: top-right (default), top-left, bottom-right, bottom-left
-- Compact mode: collapsed by default showing only a palette icon
-- Theme order: same as the table in Step 1.1
-
-### Step 1.4 — Interaction Simulation (CSS-Only)
-
-Use CSS checkbox/radio hacks for interactions — no JS required (except theme switcher).
-
-| Interaction | CSS Technique |
-|-------------|--------------|
-| Modal open/close | `input[type=checkbox]:checked ~ .modal-overlay { display: flex; }` |
-| Tab switching | `input[type=radio]:checked ~ .tab-panel-n { display: block; }` |
-| Dropdown menu | Checkbox hack with absolute positioning |
-| Button loading | `.btn-loading::after { animation: spin; }` |
-| Button disabled | `.btn-disabled { opacity: 0.4; pointer-events: none; }` |
-| Form validation | `.field-error { border-color: var(--error); }` |
-| Empty state | `.empty-state { ... }` class |
-| Alert dismiss | Checkbox + `.alert-toggle:checked + .ui-alert { display: none; }` |
-| Table row hover | `.ui-table tbody tr:hover { background: var(--bg-secondary); }` |
-| Skeleton loading | `@keyframes shimmer` animation |
-
-**CSS checkbox hack pattern:**
-
-```html
-<input type="checkbox" id="modal-{{id}}" class="modal-trigger" hidden>
-<div class="ui-modal-overlay">
-  <div class="ui-modal">
-    <div class="ui-modal-header">
-      <span>Title</span>
-      <label for="modal-{{id}}" class="ui-modal-close">&times;</label>
-    </div>
-    <div class="ui-modal-body">Content</div>
-    <div class="ui-modal-footer">
-      <label for="modal-{{id}}" class="ui-btn">Cancel</label>
-      <button class="ui-btn ui-btn-primary">Confirm</button>
-    </div>
-  </div>
-</div>
-<label for="modal-{{id}}" class="ui-btn ui-btn-primary">Open</label>
-```
-
-```css
-.modal-trigger:checked + .ui-modal-overlay { display: flex; }
-```
-
-### Step 1.5 — Annotate
-
-Add inline HTML comments for traceability:
-- `<!-- PRD: 4.1 -->` — maps sections back to the PRD
+Add inline comments:
+- `<!-- PRD: 4.1 -->` — maps to PRD sections
 - `<!-- [新增] -->` / `<!-- [变更] -->` — iteration markers
 - `<!-- TODO: 确认筛选条件枚举值 -->` — unresolved decisions
 
 ---
 
-## Phase 2 — Verify (Quality Closure)
+## Phase 1.5 — Annotation Injection (暗门注释)
+
+### Step 1.5.1 — Load Annotation Spec
+
+Load `references/annotation-spec.md` for the 7-layer structure and per-page-type customization strategy.
+
+### Step 1.5.2 — Generate Annotation Content
+
+Per page-type layer mapping:
+
+| Page Type | Core Layers | Optional |
+|-----------|-------------|----------|
+| **List** | L0, L1(search+table), L2, L4, L6 | L3(slim), L5 |
+| **Form** | L0, L1(all fields+cascade+validation), L2, L4, L6 | L3(—), L5(—) |
+| **Detail** | L0, L1, L2, L3(full), L4, L6 | L5 |
+| **Dashboard** | L0, L1(metrics), L2, L4, L6 | L3(—), L5 |
+| **Composite** | All 7 layers, content tabbed by region | — |
+
+Missing layers MUST still have empty `anno-tab-content` containers (prevents JS errors). Use placeholder text: "本页面无状态机相关注释（{{页面类型}}不涉及实体状态流转）".
+
+All example data MUST be fictional and marked `(示例)`. No PII, credentials, or internal IPs.
+
+### Step 1.5.3 — Wire Annotation Badges
+
+```html
+<span class="annotation-badge" data-anno-ref="1">1</span>
+```
+
+Parent elements with badges MUST have class `has-annotation` (for `position: relative`).
+
+### Step 1.5.4 — Embed Drawer Component
+
+Load the complete drawer HTML/CSS/JS from `references/anno-drawer-template.md`. All 7 tab containers (`anno-tab-l0` through `anno-tab-l6`) must be present even if some layers are empty.
+
+### Gate 1.5
+
+> Do not enter Phase 2 until annotation content generated for all required layers and drawer component embedded.
+
+---
+
+## Phase 2 — Verify
 
 ### Step 2.1 — Self-Check
 
-- [ ] Opens in browser without errors (no CDN URLs, no broken references)
-- [ ] Layout matches PRD description
-- [ ] All form fields correspond to PRD field definitions
-- [ ] Theme switcher visible — all 6 themes switch correctly
-- [ ] Interactions functional (modal via checkbox hack, tabs via radio hack)
-- [ ] CSS variables used everywhere (grep for `#` hex outside theme blocks = fail)
-- [ ] Responsive layout works across mobile/tablet/desktop (web target) or touch-friendly (mobile target)
-- [ ] Component choices match Step 0.4 decision matrix
-- [ ] Single file ≤ 800 lines (or split correctly for multi-page)
-
-**Interaction Completeness (MUST verify every item):**
-- [ ] Every `<button>` and `<a>` triggers an action — no dead buttons
-- [ ] Table action buttons (View/Edit/Delete) each open different modals with different content
-- [ ] "Add" / "Create" buttons open creation form modals
-- [ ] Pagination links are clickable and change content
-- [ ] Form submission buttons show confirmation or validation feedback
-- [ ] Menu items link to pages or meaningful anchors
-
-**State Display Completeness:**
-- [ ] **Data state** — 5-8 rows of realistic data with varied statuses (success/warning/error/default tags)
-- [ ] **Empty state** — triggerable via checkbox, shows `.ui-empty` with guidance text
-- [ ] **Loading state** — triggerable via checkbox, shows shimmer skeleton animation
-- [ ] **Error state** — triggerable via checkbox, shows error alert with retry button
-- [ ] State toggles are clearly labeled and visible
-
-**Data Quality:**
-- [ ] Table has 5-8 rows minimum (not empty placeholder)
-- [ ] Rows include varied statuses (at least 3 different tag colors)
-- [ ] Timestamps use realistic dates (not "2024-01-01")
-- [ ] Names, amounts, progress values are realistic
-
-**Multi-page additional:**
-- [ ] `shared.css` generated first, referenced by all pages
-- [ ] No skeleton class redefinition in page `<style>` blocks
-- [ ] Sidebar HTML identical across pages (except active item)
-- [ ] Directory structure mirrors menu structure
-- [ ] `index.html` = lightweight shell only
-- [ ] All navigation via `<a href>` — no JS
-- [ ] Every sidebar menu item has a corresponding HTML page
+- [ ] Opens in browser without errors (no CDN, no broken references)
+- [ ] CSS variables used everywhere (no hardcoded colors)
+- [ ] All buttons trigger actions — no dead buttons
+- [ ] Four state views present and triggerable
+- [ ] 5-8 rows realistic data with varied statuses
+- [ ] Annotation drawer: Ctrl+B toggles, Escape closes, resizable
+- [ ] L0-L6 tabs present and switching correctly
+- [ ] Badges hidden when drawer closed, visible when open
+- [ ] No real PII/credentials in annotation examples
 
 ### Step 2.2 — Quality Review
 
-Two-dimensional review. Output report. Any fail → fix and re-review.
+Two-dimensional review:
+- **Component Correctness**: Components match PRD semantics, `.ui-*` naming
+- **Requirement Consistency**: All PRD fields reflected in search/table/form/detail
+- **Annotation Completeness**: All required layers populated, badges wired, drawer functional
 
-**Component Correctness:**
-- Data entry components match PRD semantics
-- Data display components match (Tag = pill, not badge)
-- CSS class names correspond to theme conventions
-
-**Requirement Consistency:**
-- Field completeness (every PRD field in search/table/form/detail)
-- Filter conditions with correct input types
-- Action buttons complete and correctly labeled
-- Status tags with appropriate color schemes
-- Interaction flows traversable via CSS hacks
-- Data validation rules reflected in forms
-
-**Interaction Completeness Review:**
-- Every button triggers a modal, navigation, or state change
-- View/Edit/Delete actions open distinct modals with different content
-- Pagination page numbers are clickable and change display
-- Menu items link to pages or anchors
-- No orphan buttons or dead links
-
-**Navigation Integrity Review:**
-- Sidebar/menu items cover all PRD modules
-- Each menu item links to a meaningful destination
-- Breadcrumb trail is complete and navigable
-- Table action column has View/Edit/Delete with correct labels
-- Multi-page: every menu item maps to a real HTML file
-
-**State Display Review:**
-- Data state: 5-8 rows with varied status colors (success/warning/error/default)
-- Empty state: shows guidance text and action button
-- Loading state: shimmer skeleton animation
-- Error state: error message + retry button
-- State toggles are accessible and clearly labeled
-
-**Iteration Additional Review:**
-- Unchanged regions preserved exactly
-- No component type drift
-- No action column style drift
-- No tag color drift
-
-### Gate 2 — Build & Verification Gate
+### Gate 2
 
 > Do not deliver until self-check and quality review both pass.
 
@@ -1280,135 +1062,75 @@ prototypes/
 
 | Gate | Verification Action | Failure Handling |
 |------|--------------------|------------------|
-| Gate 1 | Verify all required params collected (PRD doc, page name) + project context detection complete | `⚠️ [GATE1] Missing params: {list}. If user insists, override and annotate output: <!-- ⚠️ Gate 1 OVERRIDE: {param} missing -->` |
-| Gate 2 | Verify self-check + quality review passed with no `[❌]` items | Fix all failures. If 5+ checks fail, restart from Phase 1. Output report with `<!-- ⚠️ [GATE2] {n} failures fixed -->` |
-| Output Integrity | Verify file exists at output path, non-empty, valid HTML structure | If file write fails (disk full, permission denied): report error to user, suggest alternate path. Retry once. If still fails, output file content as text in chat. |
+| Gate 1 | Verify all required params collected + project context detection complete | `<!-- ⚠️ [GATE1] Missing: {list} -->` |
+| Gate 1.5 | Verify annotation content for all required layers + drawer embedded | Back to Phase 1.5, fill missing layers |
+| Gate 2 | Verify self-check + quality review passed | Fix all failures. If 5+ fail, restart Phase 1 |
 
 ---
 
 ## Green Team Supplement — Safety & Security
 
-This supplement adds defensive guardrails to every phase above. Each rule below is mandatory.
-
 ### S.1 Parameter Validation
-
-Every user-supplied parameter must pass validation before use. Invalid values fall back to documented defaults with an annotation.
 
 | Parameter | Allowed Values | Default | Validation Failure Action |
 |-----------|---------------|---------|---------------------------|
-| Prototype mode | `single-page`, `multi-page` | `single-page` | Log warning, use default, annotate: `<!-- ⚠️ [PARAM] mode="{value}" invalid, defaulted to single-page -->` |
+| Prototype mode | `single-page`, `multi-page` | `single-page` | Log warning, use default, annotate |
 | Dev scenario | `new-project`, `iteration` | `new-project` | Same as above |
-| Page name | Non-empty, no `/` `\` `: * ? " < > \|`, ≤ 255 chars, trimmed | MUST be provided | Reject with error message. After 3 rejections: use `"untitled-page"`, annotate override |
-| Component library | `antd`, `element`, `arco`, `semi`, `tdesign`, `none` | `antd` | Same as prototype mode |
-| Page type | `list`, `form`, `detail`, `dashboard`, `composite` | Auto-detect from PRD → fallback `list` | Use auto-detect, then default |
+| Page name | Non-empty, no `/` `\` `: * ? " < > \|`, ≤ 255 chars | MUST be provided | Reject. After 3 rejections: `"untitled-page"` |
+| Page type | `list`, `form`, `detail`, `dashboard`, `composite` | Auto-detect → `list` | Use auto-detect, then default |
 | Device target | `web`, `mobile` | `web` | Same as prototype mode |
-| Theme context | `auto`, `admin`, `client-portal`, `public-site`, `mobile-app` | `auto` | Same as prototype mode |
-| Theme mode | `light`, `dark` | `light` | Same as prototype mode |
 
 ### S.2 Path Safety Rules
 
-When generating output files, enforce these rules in order:
-
-1. **Resolve to absolute path**: Convert user-specified output path to absolute path using workspace root
-2. **Workspace boundary check**: Verify resolved path starts with workspace root. If it escapes (e.g., `../../../etc`), reject and use default `./prototype/`
-3. **Existing file check**: If target file already exists, ask user for confirmation to overwrite. If no response within 2 prompts, use a numbered variant (e.g., `mypage-v2.html`)
-4. **Reserved name check**: On Windows, reject names: `CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, `LPT1-9`. On any OS, reject names containing only dots (`.`, `..`).
-5. **Nesting limit**: Do not create directories deeper than 5 levels from the output root
-6. **File extension**: Ensure output file ends in `.html`. If user provides a path without extension, append `.html`
-
-**Failure annotation format:**
-```
-<!-- ⚠️ [PATH] {rule violated}: {description} → used {fallback-path} -->
-```
+1. Resolve to absolute path using workspace root
+2. Verify resolved path starts with workspace root (reject `../../../etc`)
+3. If target file exists, ask user to confirm overwrite
+4. Reject reserved names: `CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, `LPT1-9`
+5. Do not create directories deeper than 5 levels from output root
+6. Ensure output file ends in `.html`
 
 ### S.3 CDN / External Resource Strategy
 
-This skill uses **zero external dependencies** — all CSS is self-contained in the generated HTML. However, the theme switcher uses a tiny inline JS (6 lines). If the workspace forbids inline scripts:
-
-- Remove the JS theme switcher
-- Default to `.theme-antd` only (no runtime switching)
-- Annotate: `<!-- ⚠️ [SECURITY] Inline JS disabled — theme switching requires JS. Defaulting to Ant Design. -->`
+Zero external dependencies — all CSS self-contained. Annotation drawer uses minimal inline JS (Ctrl+B toggle, Escape close, resize). If workspace forbids inline scripts, remove drawer JS, annotate: `<!-- ⚠️ [SECURITY] Inline JS disabled — annotation drawer requires JS. -->`
 
 ### S.4 Failure Handling Protocol
 
-Every step must handle failure gracefully using this escalation ladder:
-
 | Level | Condition | Action |
 |-------|-----------|--------|
-| **Info** | Non-critical style dimension missing | Auto-detect or use default. Annotate: `<!-- ⚡ [AUTO] {dimension}={value} -->` |
-| **Warning** | Parameter invalid, path conflict, file unreadable | Use fallback. Annotate: `<!-- ⚠️ [WARN] {description} → {action} -->` |
-| **Error** | Required file unreadable, disk full, template missing | Ask user. After 2 unanswered prompts, use fallback. Annotate: `<!-- 🚨 [ERROR] {description} → {fallback} -->` |
-| **Critical** | All data sources unavailable, workspace unreachable | Report failure to user. Do NOT generate empty/broken output. |
-
-**Critical failure rule:** After 2 consecutive critical failures in the same generation session, stop and output a failure report listing all issues. Do NOT retry silently.
+| **Info** | Non-critical dimension missing | Auto-detect or default. `<!-- ⚡ [AUTO] -->` |
+| **Warning** | Parameter invalid, path conflict | Use fallback. `<!-- ⚠️ [WARN] -->` |
+| **Error** | Required file unreadable, template missing | Ask user. `<!-- 🚨 [ERROR] -->` |
+| **Critical** | All data sources unavailable | Report failure. Do NOT generate empty output. |
 
 ### S.5 Boundary Conditions
 
-The generated HTML must account for these scenarios:
-
 | Condition | Handling |
 |-----------|----------|
-| **Empty dataset** | Show `.ui-empty` with guidance text: "暂无数据，请调整筛选条件" |
-| **Long text overflow** | CSS `text-overflow: ellipsis; overflow: hidden; white-space: nowrap;` on all table cells |
-| **Modal content overflow** | `.ui-modal-body { max-height: 60vh; overflow-y: auto; }` |
-| **Missing image** | `img { max-width: 100%; }` and `alt` text on all images |
-| **Form submission without JS** | Show static confirmation state or validation hints via CSS |
-| **Table with 0 columns** | Always generate at minimum: column for name, status, action |
-| **Browser without CSS variables** | Include fallback values: `color: #333; color: var(--text);` |
-| **Null/undefined state values** | Default display value `—` (em dash) for empty table cells |
+| Empty dataset | Show `.ui-empty` with guidance text |
+| Long text overflow | `text-overflow: ellipsis; overflow: hidden; white-space: nowrap;` |
+| Modal content overflow | `.ui-modal-body { max-height: 60vh; overflow-y: auto; }` |
+| Null/undefined state values | Default display `—` (em dash) for empty table cells |
 
 ### S.6 Annotation Standards
-
-Every generated HTML must include these annotation types:
 
 ```
 <!-- PRD: {section-ref} -->                    # Maps to PRD section
 <!-- [新增] {description} -->                   # New content in iteration
 <!-- [变更] {description} -->                   # Changed content in iteration
 <!-- ⚠️ [PARAM] {param} defaulted to {value} -->  # Parameter fallback
-<!-- ⚠️ [PATH] {rule} → {fallback} -->           # Path safety override
-<!-- ⚠️ [GATE{n}] {issue} -->                   # Gate override
 <!-- ⚡ [AUTO] {dimension}={value} -->            # Auto-detected value
 <!-- 🚨 [ERROR] {description} → {action} -->      # Error and recovery
 ```
-
-### S.7 Self-Check Supplement
-
-Add these checks to Step 2.1 Self-Check:
-
-**Path & Output:**
-- [ ] Output file written to the correct path (not workspace-escaped)
-- [ ] No overwrite occurred without confirmation
-- [ ] File extension is `.html`
-
-**Boundary Conditions:**
-- [ ] Long text in table cells uses `text-overflow: ellipsis`
-- [ ] Modal content is scrollable (not cut off)
-- [ ] Empty cells show `—` not blank/undefined
-- [ ] All images have `alt` attribute
-- [ ] Required form fields are marked with asterisk
-
-**Annotation Completeness:**
-- [ ] Every PRD section mapped via `<!-- PRD: -->` comment
-- [ ] Every parameter default documented with `<!-- ⚠️ [PARAM] -->`
-- [ ] Every path safety override documented with `<!-- ⚠️ [PATH] -->`
-- [ ] Every auto-detected value documented with `<!-- ⚡ [AUTO] -->`
-
-**Multi-Page Boundary Checks:**
-- [ ] All inter-page `<a href>` paths resolve correctly (no dead links, no absolute paths)
-- [ ] `shared.css` path is relative and correct from each page depth level
-- [ ] No page generates a file with the same name as a reserved OS filename
-- [ ] Sidebar HTML identical across all pages (diff check on active-item only difference)
 
 ---
 
 ## Iron Rules
 
-1. **Self-contained**: No external files, no CDN, no `assets/` or `references/` — everything in one HTML
-2. **CSS variables, never hardcode**: Hex values only inside theme definition blocks
-3. **Responsive**: Mobile-first, `min-width` breakpoints. Web and mobile layouts must differ.
-4. **CSS-only interactions**: Checkbox/radio hacks — no JS except theme switcher
-5. **Theme switcher mandatory**: Every generated prototype includes it with all 6 themes
+1. **Self-contained**: No external files, no CDN — everything in one HTML (or shared.css for multi-page)
+2. **CSS variables, never hardcode**: Hex values only inside `:root` theme definition
+3. **Responsive**: Desktop-first (web) or mobile-first (mobile)
+4. **CSS-only interactions**: Checkbox/radio hacks — no JS except annotation drawer
+5. **Annotation drawer mandatory**: Every prototype includes Ctrl+B toggleable L0-L6 drawer
 6. **Single file ≤ 800 lines**: Split for multi-page mode
 7. **Context detection mandatory**: Never default to standalone without asking
 8. **Multi-page shared CSS single source**: `shared.css` first, referenced by all pages
@@ -1416,7 +1138,7 @@ Add these checks to Step 2.1 Self-Check:
 10. **Stop after 2 unresolved rendering issues**: Report to user
 11. **Iteration preserves existing**: Only modify what PRD explicitly changes
 12. **`index.html` = lightweight shell**: No business content in the entry page
-13. **Validate or default**: Every user parameter must be validated; invalid values fall back to documented defaults with `<!-- ⚠️ [PARAM] -->` annotation
-14. **Path safety**: Never write outside workspace, never overwrite without confirmation, never use reserved filenames
-15. **Fail with annotation**: Every failure mode must produce a `<!-- ⚠️ -->` or `<!-- 🚨 -->` annotation — never fail silently
-16. **All states required**: Every page must include Data / Empty / Loading / Error state views triggerable via checkbox/radio
+13. **Validate or default**: Every parameter validated; invalid values fall back with annotation
+14. **Path safety**: Never write outside workspace, never overwrite without confirmation
+15. **Fail with annotation**: Every failure produces `<!-- ⚠️ -->` or `<!-- 🚨 -->` — never fail silently
+16. **All states required**: Data / Empty / Loading / Error state views triggerable via checkbox/radio
