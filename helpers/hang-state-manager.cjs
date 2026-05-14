@@ -54,6 +54,44 @@ const PHASE_LABELS = {
   done: '完成',
 };
 
+// ─── SOP 26步定义 ───
+const SOP_STEPS = [
+  { num: 1, phase: "需求设计", role: "human", platform: "PC", op: "需求采集", output: "需求记录文档" },
+  { num: 2, phase: "需求设计", role: "human", platform: "PC", op: "问题确认", output: "需求确认表格" },
+  { num: 3, phase: "需求设计", role: "agent", platform: "IDE", op: "原型制作", output: "PRD" },
+  { num: 4, phase: "需求设计", role: "agent", platform: "IDE", op: "原型制作", output: "原型" },
+  { num: 5, phase: "需求设计", role: "human", platform: "PC", op: "需求确认", output: "需求确认记录" },
+  { num: 6, phase: "需求设计", role: "human", platform: "PC", op: "需求宣讲", output: "会议问题记录" },
+  { num: 7, phase: "需求设计", role: "agent", platform: "IDE", op: "原型注释追加", output: "原型注释+补充意见.md" },
+  { num: 8, phase: "需求设计", role: "human", platform: "PC", op: "需求问题梳理", output: "PRD问题及提案" },
+  { num: 9, phase: "需求设计", role: "human", platform: "PC", op: "人类问题方案汇总澄清", output: "PRD审定汇总意见" },
+  { num: 10, phase: "需求设计", role: "human", platform: "PC", op: "人机澄清审定需求", output: "审定版PRD" },
+  { num: 11, phase: "需求设计", role: "agent", platform: "IDE", op: "按存量代码生成wiki", output: "wiki及原始spec" },
+  { num: 12, phase: "需求设计", role: "agent", platform: "IDE", op: "按PRD产生spec", output: "spec初版" },
+  { num: 13, phase: "需求设计", role: "human", platform: "PC", op: "设计问题梳理", output: "spec问题及提案" },
+  { num: 14, phase: "需求设计", role: "human", platform: "PC", op: "人类问题方案汇总澄清", output: "spec审定汇总意见" },
+  { num: 15, phase: "需求设计", role: "agent", platform: "IDE", op: "按汇总意见生成定版spec", output: "审定版spec" },
+  { num: 16, phase: "实现阶段", role: "agent", platform: "IDE", op: "测试用例设计", output: "测试文档" },
+  { num: 17, phase: "实现阶段", role: "human", platform: "PC", op: "用例评审", output: "测试文档定版" },
+  { num: 18, phase: "实现阶段", role: "agent", platform: "IDE", op: "测试脚本开发", output: "脚本" },
+  { num: 19, phase: "实现阶段", role: "agent", platform: "IDE", op: "功能开发", output: "代码" },
+  { num: 20, phase: "实现阶段", role: "agent", platform: "IDE", op: "codereview", output: "review记录" },
+  { num: 21, phase: "实现阶段", role: "agent", platform: "IDE", op: "自动测试执行", output: "测试报告" },
+  { num: 22, phase: "实现阶段", role: "agent", platform: "IDE", op: "checklist门控", output: "门控记录" },
+  { num: 23, phase: "实现阶段", role: "agent", platform: "IDE", op: "产生使用手册", output: "使用手册" },
+  { num: 24, phase: "实现阶段", role: "human", platform: "PC", op: "人类验收", output: "issue/变更" },
+  { num: 25, phase: "实现阶段", role: "human", platform: "PC", op: "产品定版", output: "定版文档及代码" },
+  { num: 26, phase: "实现阶段", role: "agent", platform: "IDE", op: "回写wiki及变动日志", output: "wiki更新" }
+];
+
+const DEPTH_MAP = {
+  prototype: { maxStep: 4, label: "仅原型+PRD草稿" },
+  prd: { maxStep: 10, label: "完成需求审定" },
+  spec: { maxStep: 15, label: "完成技术设计" },
+  mvp: { maxStep: 22, label: "最小可用产品" },
+  full: { maxStep: 26, label: "TDD端到端完整交付" }
+};
+
 // ─── Ensure directory ───
 function ensureDir() {
   const dir = path.dirname(STATE_FILE);
@@ -597,6 +635,237 @@ function remove() {
   return { ok: true };
 }
 
+// ─── SOP: 初始化 ───
+function initSop(depth) {
+  const level = depth || 'full';
+  if (!DEPTH_MAP[level]) {
+    return { ok: false, error: `无效深度: ${level}。有效值: ${Object.keys(DEPTH_MAP).join(', ')}` };
+  }
+
+  const state = getState() || {};
+  const maxStep = DEPTH_MAP[level].maxStep;
+
+  const steps = SOP_STEPS.map(s => {
+    let status = 'pending';
+    if (s.num > maxStep) status = 'excluded';
+    if (s.num === 1) status = 'current';
+    return { num: s.num, status };
+  });
+
+  state.sopNav = {
+    taskDepth: level,
+    currentStep: 1,
+    steps
+  };
+
+  writeState(state);
+  return { ok: true, state };
+}
+
+// ─── SOP: 设置深度 ───
+function sopSetDepth(level) {
+  if (!DEPTH_MAP[level]) {
+    return { ok: false, error: `无效深度: ${level}。有效值: ${Object.keys(DEPTH_MAP).join(', ')}` };
+  }
+
+  const state = getState();
+  if (!state || !state.sopNav) {
+    return { ok: false, error: '无活跃的 SOP 会话。请先执行 --init-sop。' };
+  }
+
+  const maxStep = DEPTH_MAP[level].maxStep;
+  state.sopNav.taskDepth = level;
+
+  for (const step of state.sopNav.steps) {
+    if (step.num > maxStep && step.status !== 'done' && step.status !== 'skipped') {
+      step.status = 'excluded';
+    } else if (step.num <= maxStep && step.status === 'excluded') {
+      step.status = 'pending';
+    }
+  }
+
+  // If currentStep is now excluded, find next valid step
+  const curStep = state.sopNav.steps.find(s => s.num === state.sopNav.currentStep);
+  if (curStep && curStep.status === 'excluded') {
+    const nextValid = state.sopNav.steps.find(s => s.num > 0 && s.status === 'pending');
+    if (nextValid) {
+      nextValid.status = 'current';
+      state.sopNav.currentStep = nextValid.num;
+    }
+  }
+
+  writeState(state);
+  return { ok: true, state };
+}
+
+// ─── SOP: 跳过步骤 ───
+function sopSkip(stepNum) {
+  const state = getState();
+  if (!state || !state.sopNav) {
+    return { ok: false, error: '无活跃的 SOP 会话。请先执行 --init-sop。' };
+  }
+
+  const targetNum = stepNum || state.sopNav.currentStep;
+  const targetStep = state.sopNav.steps.find(s => s.num === targetNum);
+  if (!targetStep) {
+    return { ok: false, error: `步骤 ${targetNum} 不存在。` };
+  }
+  if (targetStep.status === 'excluded') {
+    return { ok: false, error: `步骤 ${targetNum} 已被排除（不在当前深度范围内）。` };
+  }
+
+  targetStep.status = 'skipped';
+
+  // If skipping current step, advance to next valid
+  if (targetNum === state.sopNav.currentStep) {
+    const nextValid = state.sopNav.steps.find(s => s.num > targetNum && s.status !== 'excluded' && s.status !== 'skipped' && s.status !== 'done');
+    if (nextValid) {
+      nextValid.status = 'current';
+      state.sopNav.currentStep = nextValid.num;
+    } else {
+      state.sopNav.currentStep = targetNum; // stay, all done
+    }
+  }
+
+  writeState(state);
+  return { ok: true, state };
+}
+
+// ─── SOP: 标记当前步骤完成 ───
+function sopStepDone() {
+  const state = getState();
+  if (!state || !state.sopNav) {
+    return { ok: false, error: '无活跃的 SOP 会话。请先执行 --init-sop。' };
+  }
+
+  const curStep = state.sopNav.steps.find(s => s.num === state.sopNav.currentStep);
+  if (!curStep) {
+    return { ok: false, error: '当前步骤不存在。' };
+  }
+
+  curStep.status = 'done';
+
+  // Advance to next non-excluded/non-skipped step
+  const nextValid = state.sopNav.steps.find(s => s.num > state.sopNav.currentStep && s.status !== 'excluded' && s.status !== 'skipped' && s.status !== 'done');
+  if (nextValid) {
+    nextValid.status = 'current';
+    state.sopNav.currentStep = nextValid.num;
+  }
+  // else: all steps done, currentStep stays
+
+  writeState(state);
+  return { ok: true, state };
+}
+
+// ─── SOP: 回退上一步 ───
+function sopStepBack() {
+  const state = getState();
+  if (!state || !state.sopNav) {
+    return { ok: false, error: '无活跃的 SOP 会话。请先执行 --init-sop。' };
+  }
+
+  const currentNum = state.sopNav.currentStep;
+  // Find previous non-excluded/non-skipped step
+  let prevStep = null;
+  for (let i = currentNum - 2; i >= 0; i--) {
+    const s = state.sopNav.steps[i];
+    if (s && s.status !== 'excluded' && s.status !== 'skipped') {
+      prevStep = s;
+      break;
+    }
+  }
+
+  if (!prevStep) {
+    return { ok: false, error: '已在第一步，无法回退。' };
+  }
+
+  // Reset current step to pending
+  const curStep = state.sopNav.steps.find(s => s.num === currentNum);
+  if (curStep && curStep.status === 'current') {
+    curStep.status = 'pending';
+  }
+
+  // Set previous step as current
+  prevStep.status = 'current';
+  state.sopNav.currentStep = prevStep.num;
+
+  writeState(state);
+  return { ok: true, state };
+}
+
+// ─── SOP: 渲染导航面板 ───
+function renderNavPanel(state) {
+  if (!state || !state.sopNav) {
+    return '⚠️ 无活跃的 SOP 导航。请先执行 --init-sop。';
+  }
+
+  const nav = state.sopNav;
+  const depthInfo = DEPTH_MAP[nav.taskDepth] || { maxStep: 26, label: 'unknown' };
+  const lines = [];
+  const W = 68;
+
+  lines.push(`\u250c${"\u2500".repeat(W - 2)}\u2510`);
+  const headerLine = `  夯 SOP 导航面板          深度: [${nav.taskDepth}]    当前: Step ${nav.currentStep}/${depthInfo.maxStep}`;
+  lines.push(`\u2502${headerLine.padEnd(W - 2)}\u2502`);
+  lines.push(`\u251c${"\u2500".repeat(W - 2)}\u2524`);
+  lines.push(`\u2502${' '.repeat(W - 2)}\u2502`);
+
+  // Group steps by phase
+  const phases = ['\u9700\u6c42\u8bbe\u8ba1', '\u5b9e\u73b0\u9636\u6bb5'];
+  for (const phase of phases) {
+    const phaseSteps = SOP_STEPS.filter(s => s.phase === phase);
+    const phaseHeader = `  \u2500\u2500 ${phase} ${"\u2500".repeat(W - 8 - phase.length * 2)}`;
+    lines.push(`\u2502${phaseHeader.padEnd(W - 2)}\u2502`);
+
+    for (const step of phaseSteps) {
+      const stepState = nav.steps.find(s => s.num === step.num);
+      if (!stepState) continue;
+
+      // Status icon
+      let icon = '[ ]';
+      if (stepState.status === 'done') icon = '[v]';
+      else if (stepState.status === 'current') icon = '[>]';
+      else if (stepState.status === 'skipped') icon = '[-]';
+      else if (stepState.status === 'excluded') icon = '[x]';
+
+      const roleLabel = step.role === 'agent' ? 'AI  ' : '\u4eba\u7c7b';
+      const numStr = String(step.num).padEnd(2);
+      const opStr = step.op.length > 12 ? step.op.substring(0, 12) : step.op.padEnd(12);
+      const line = `  ${icon} ${numStr}. ${opStr}  ${roleLabel} | ${step.platform.padEnd(3)}  \u2192 ${step.output}`;
+      const truncated = line.length > W - 4 ? line.substring(0, W - 4) : line;
+      lines.push(`\u2502${truncated.padEnd(W - 2)}\u2502`);
+    }
+    lines.push(`\u2502${' '.repeat(W - 2)}\u2502`);
+  }
+
+  // Separator
+  lines.push(`\u2502  ${"\u2500".repeat(W - 6)}  \u2502`);
+
+  // Next step guidance
+  const currentStepDef = SOP_STEPS.find(s => s.num === nav.currentStep);
+  const allDoneInDepth = nav.steps.filter(s => s.num <= depthInfo.maxStep).every(s => s.status === 'done' || s.status === 'skipped' || s.status === 'excluded');
+
+  let guideLine;
+  if (allDoneInDepth) {
+    guideLine = `  \u5f53\u524d\u6df1\u5ea6 [${nav.taskDepth}] \u5df2\u5b8c\u6210\u5168\u90e8\u6b65\u9aa4\uff01\u5982\u9700\u7ee7\u7eed\uff0c\u8f93\u5165 [depth X] \u6269\u5c55\u6df1\u5ea6`;
+  } else if (currentStepDef) {
+    if (currentStepDef.role === 'agent') {
+      guideLine = `  \u4e0b\u4e00\u6b65: AI \u6267\u884c\u300c${currentStepDef.op}\u300d\u2192 \u4ea7\u51fa\u300c${currentStepDef.output}\u300d`;
+    } else {
+      guideLine = `  \u4e0b\u4e00\u6b65: \u9700\u8981\u4eba\u7c7b\u5728 ${currentStepDef.platform} \u6267\u884c\u300c${currentStepDef.op}\u300d\u2192 \u4ea7\u51fa\u300c${currentStepDef.output}\u300d`;
+    }
+  } else {
+    guideLine = '  \u6240\u6709\u6b65\u9aa4\u5df2\u5b8c\u6210';
+  }
+  lines.push(`\u2502${guideLine.padEnd(W - 2)}\u2502`);
+
+  const opLine = '  \u64cd\u4f5c: [next] \u7ee7\u7eed | [skip] \u8df3\u8fc7 | [depth X] \u8c03\u6574\u6df1\u5ea6';
+  lines.push(`\u2502${opLine.padEnd(W - 2)}\u2502`);
+  lines.push(`\u2514${"\u2500".repeat(W - 2)}\u2518`);
+
+  return lines.join('\n');
+}
+
 // ─── CLI ───
 function cli() {
   const args = process.argv.slice(2);
@@ -744,6 +1013,70 @@ function cli() {
     process.exit(0);
   }
 
+  // ─── SOP Commands ───
+  if (args.includes('--init-sop')) {
+    const idx = args.indexOf('--init-sop') + 1;
+    const level = (args[idx] && !args[idx].startsWith('-')) ? args[idx] : 'full';
+    const result = initSop(level);
+    if (result.ok) {
+      console.log(renderNavPanel(result.state));
+    } else {
+      console.error(result.error);
+    }
+    process.exit(result.ok ? 0 : 1);
+  }
+
+  if (args.includes('--nav')) {
+    const state = getState();
+    console.log(renderNavPanel(state));
+    process.exit(0);
+  }
+
+  if (args.includes('--skip')) {
+    const idx = args.indexOf('--skip') + 1;
+    const stepNum = (args[idx] && !args[idx].startsWith('-')) ? parseInt(args[idx], 10) : undefined;
+    const result = sopSkip(isNaN(stepNum) ? undefined : stepNum);
+    if (result.ok) {
+      console.log(renderNavPanel(result.state));
+    } else {
+      console.error(result.error);
+    }
+    process.exit(result.ok ? 0 : 1);
+  }
+
+  if (args.includes('--depth') && !args.includes('--init')) {
+    const idx = args.indexOf('--depth') + 1;
+    const level = args[idx];
+    if (!level) { console.error('Usage: hang-state-manager.cjs --depth <prototype|prd|spec|mvp|full>'); process.exit(1); }
+    const result = sopSetDepth(level);
+    if (result.ok) {
+      console.log(renderNavPanel(result.state));
+    } else {
+      console.error(result.error);
+    }
+    process.exit(result.ok ? 0 : 1);
+  }
+
+  if (args.includes('--step-done')) {
+    const result = sopStepDone();
+    if (result.ok) {
+      console.log(renderNavPanel(result.state));
+    } else {
+      console.error(result.error);
+    }
+    process.exit(result.ok ? 0 : 1);
+  }
+
+  if (args.includes('--step-back')) {
+    const result = sopStepBack();
+    if (result.ok) {
+      console.log(renderNavPanel(result.state));
+    } else {
+      console.error(result.error);
+    }
+    process.exit(result.ok ? 0 : 1);
+  }
+
   // Default: show usage
   console.log('hang-state-manager.cjs — 夯执行状态持久化管理器');
   console.log('');
@@ -759,6 +1092,14 @@ function cli() {
   console.log('  并发看板: hang-state-manager.cjs --concurrent-dashboard');
   console.log('  开并发:   hang-state-manager.cjs --concurrent-mode qoder');
   console.log('  清理:     hang-state-manager.cjs --remove');
+  console.log('');
+  console.log('  SOP 导航:');
+  console.log('  初始SOP:  hang-state-manager.cjs --init-sop [depth]');
+  console.log('  导航:     hang-state-manager.cjs --nav');
+  console.log('  跳过:     hang-state-manager.cjs --skip [stepNum]');
+  console.log('  深度:     hang-state-manager.cjs --depth <prototype|prd|spec|mvp|full>');
+  console.log('  完成步:   hang-state-manager.cjs --step-done');
+  console.log('  回退:     hang-state-manager.cjs --step-back');
 }
 
 if (require.main === module) {
@@ -784,9 +1125,17 @@ module.exports = {
   syncFromHammer,
   syncAndShow,
   getContextStats,
+  initSop,
+  sopSetDepth,
+  sopSkip,
+  sopStepDone,
+  sopStepBack,
+  renderNavPanel,
   VALID_DEPTHS,
   DEPTH_LABELS,
   DEPTH_STAGES,
   PHASE_LABELS,
+  SOP_STEPS,
+  DEPTH_MAP,
 };
 

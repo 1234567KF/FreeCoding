@@ -131,24 +131,28 @@ graph:
 
 | 任务类型 | 复杂度 | DeepSeek | MiniMax | Kimi | 默认首选 |
 |---------|--------|----------|--------|------|---------|
-| 架构/设计 | 高 | **pro** | M1-thinking | kimi-k2.5 | pro |
-| 编码/实现 | 中 | **flash** | M1-fast | kimi-k2.5 | flash |
-| 代码审查 | 低 | **flash** | M1-fast | kimi-k2.5 | flash |
-| Bug 排查 | 高 | **pro** | M1-thinking | kimi-k2.5 | pro |
-| 文档生成 | 低 | flash | **M1-fast** | kimi-k2.5 | M1-fast |
-| 简单问答 | 低 | flash | M1-fast | **kimi-k2.5** | kimi-k2.5 |
-| 测试编写 | 中 | **flash** | M1-fast | kimi-k2.5 | flash |
-| UI 原型 | 中 | flash | **M1-fast** | kimi-k2.5 | M1-fast |
-| 计划/需求 | 高 | **pro** | M1-thinking | kimi-k2.5 | pro |
+| 架构/设计 | 高 | **v4-pro** | m2.5 | k2.6 | v4-pro |
+| 编码/实现 | simple/medium | **v4-flash** | m2.5 | k2.6 | v4-flash |
+| 编码/实现 | complex | v4-pro | **m2.5** | k2.6 | m2.5 |
+| 代码审查 | 低 | v4-flash | **m2.5** | k2.6 | m2.5 |
+| Bug 排查 | 高 | v4-pro | m2.5 | **k2.6** | k2.6 |
+| 文档生成 | 低 | v4-flash | m2.5 | **k2.5** | k2.5 |
+| 简单问答 | 低 | v4-flash | m2.5 | **k2.5** | k2.5 |
+| 测试编写 | 中 | **v4-flash** | m2.5 | k2.6 | v4-flash |
+| UI 原型/前端 | 中 | v4-flash | m2.5 | **k2.6** | k2.6 |
+| 计划/需求 | 高 | **v4-pro** | m2.5 | k2.6 | v4-pro |
+| 数学/算法 | 高 | **v4-pro** | m2.5 | k2.6 | v4-pro |
+| 多Agent协作 | 高 | v4-pro | m2.5 | **k2.6** | k2.6 |
 
 ## 支持的模型池
 
 | 模型 | 供应商 | 类型 | 适用场景 | 相对成本 | 环境变量 |
 |------|--------|------|---------|---------|---------|
-| deepseek-v4-flash | DeepSeek | chat | 日常编码/审查/文档 | 低 | DEEPSEEK_API_KEY |
-| deepseek-v4-pro | DeepSeek | reasoning | 架构/深度 debug/计划 | 中 | DEEPSEEK_API_KEY |
-| minimax-2.7 | MiniMax | reasoning | 长上下文/强推理 | 低 | MINIMAX_API_KEY |
-| kimi-k2.5 | Kimi | chat | 前端开发、长文本读写、文档生成 | 中 | KIMI_API_KEY |
+| deepseek-v4-pro | DeepSeek | reasoning | 架构/推理/数学/Agent | 中 | DEEPSEEK_API_KEY |
+| deepseek-v4-flash | DeepSeek | chat | 日常编码/测试/文档/缓存 | 低 | DEEPSEEK_API_KEY |
+| minimax-m2.5 | MiniMax | chat | 编程SOTA/审查/极速/低成本 | 极低 | MINIMAX_API_KEY |
+| kimi-k2.6 | Kimi | chat | 代码/前端/Agent/工具调用 | 中 | KIMI_API_KEY |
+| kimi-k2.5 | Kimi | chat | 长文本/文档/中文对话 | 中 | KIMI_API_KEY |
 
 ## 路由策略
 

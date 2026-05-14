@@ -39,6 +39,11 @@ const PRICING = {
   'deepseek-v4':       { label: 'DS-V4-Flash', input: 1.00, output: 2.00, cache_read: 0.02 },
   'deepseek-v3':       { label: 'DS-V3',       input: 2.00, output: 8.00 },
   'deepseek-r1':       { label: 'DS-R1',       input: 4.00, output: 16.00 },
+  'kimi-k2.6':         { label: 'Kimi-K2.6',   input: 1.00, output: 4.00, cache_read: null },
+  'kimi-k2.5':         { label: 'Kimi-K2.5',   input: 1.00, output: 4.00, cache_read: null },
+  'kimi-k2':           { label: 'Kimi-K2',     input: 1.00, output: 4.00, cache_read: null },
+  'minimax-m2.5':      { label: 'MM-M2.5',     input: 0.30, output: 2.40, cache_read: null },  // $0.3/$2.4 per MTok
+  'minimax-m2':        { label: 'MM-M2',       input: 0.30, output: 2.40, cache_read: null },
   'claude-sonnet':     { label: 'Sonnet',      input: 21.60, output: 108.00 },  // $3/$15
   'claude-opus':       { label: 'Opus',        input: 108.00, output: 540.00 }, // $15/$75
   'claude-haiku':      { label: 'Haiku',       input: 5.76, output: 28.80 },    // $0.80/$4
@@ -51,6 +56,13 @@ function detectPricing(modelName) {
   if (m.includes('deepseek-v3'))     return PRICING['deepseek-v3'];
   if (m.includes('deepseek-r1'))     return PRICING['deepseek-r1'];
   if (m.includes('deepseek'))        return PRICING['deepseek-v4-flash'];
+  if (m.includes('kimi-k2.6'))       return PRICING['kimi-k2.6'];
+  if (m.includes('kimi-k2.5'))       return PRICING['kimi-k2.5'];
+  if (m.includes('kimi-k2'))         return PRICING['kimi-k2'];
+  if (m.includes('kimi'))            return PRICING['kimi-k2.6'];
+  if (m.includes('minimax-m2.5'))    return PRICING['minimax-m2.5'];
+  if (m.includes('minimax-m2'))      return PRICING['minimax-m2'];
+  if (m.includes('minimax'))         return PRICING['minimax-m2.5'];
   if (m.includes('sonnet'))          return PRICING['claude-sonnet'];
   if (m.includes('opus'))            return PRICING['claude-opus'];
   if (m.includes('haiku'))           return PRICING['claude-haiku'];

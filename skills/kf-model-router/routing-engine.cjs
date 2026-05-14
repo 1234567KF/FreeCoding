@@ -14,25 +14,41 @@
 // ─── 默认路由映射（快速路径，置信度 > 0.85 时直接查表） ─────────────
 
 const FAST_ROUTE_TABLE = [
-  // simple/medium + coding → flash
+  // ── coding 场景 ──
+  // simple/medium coding → DeepSeek V4-Flash (百万上下文，接近Pro推理，缓存降低成本)
   { type: 'coding', complexity: 'simple', model: 'deepseek-v4-flash', minConfidence: 0.85 },
   { type: 'coding', complexity: 'medium', model: 'deepseek-v4-flash', minConfidence: 0.85 },
-  // complex + coding → pro
-  { type: 'coding', complexity: 'complex', model: 'deepseek-v4-pro', minConfidence: 0.85 },
-  { type: 'coding', complexity: 'very_complex', model: 'deepseek-v4-pro', minConfidence: 0.85 },
-  // architecture/planning → pro
+  // complex/very_complex coding → MiniMax M2.5 (SWE-Bench 80.2% SOTA，编程顶尖，成本极低)
+  { type: 'coding', complexity: 'complex', model: 'minimax-m2.5', minConfidence: 0.85 },
+  { type: 'coding', complexity: 'very_complex', model: 'minimax-m2.5', minConfidence: 0.85 },
+
+  // ── architecture / planning → DeepSeek V4-Pro (Agentic Coding开源最佳，推理顶尖) ──
   { type: 'architecture', complexity: '*', model: 'deepseek-v4-pro', minConfidence: 0.85 },
   { type: 'planning', complexity: '*', model: 'deepseek-v4-pro', minConfidence: 0.85 },
-  // review → flash
-  { type: 'review', complexity: '*', model: 'deepseek-v4-flash', minConfidence: 0.85 },
-  // debug → pro
-  { type: 'debug', complexity: '*', model: 'deepseek-v4-pro', minConfidence: 0.75 },
-  // doc → flash or kimi (擅长长文本)
+
+  // ── review → MiniMax M2.5 (编程review顶尖，100TPS极速) ──
+  { type: 'review', complexity: '*', model: 'minimax-m2.5', minConfidence: 0.85 },
+
+  // ── debug → Kimi K2.6 (工具调用稳定，长上下文排查彻底) ──
+  { type: 'debug', complexity: '*', model: 'kimi-k2.6', minConfidence: 0.75 },
+
+  // ── doc → Kimi K2.5 (长文本读写/文档生成专长) ──
   { type: 'doc', complexity: '*', model: 'kimi-k2.5', minConfidence: 0.85 },
-  // question → kimi (擅长前端/长上下文)
+
+  // ── question → Kimi K2.5 (中文对话+长上下文+多模态) ──
   { type: 'question', complexity: '*', model: 'kimi-k2.5', minConfidence: 0.85 },
-  // testing → flash
+
+  // ── testing → DeepSeek V4-Flash (平衡选择，缓存降低成本) ──
   { type: 'testing', complexity: '*', model: 'deepseek-v4-flash', minConfidence: 0.85 },
+
+  // ── math / algorithm → DeepSeek V4-Pro (推理/数学/STEM顶尖) ──
+  { type: 'math', complexity: '*', model: 'deepseek-v4-pro', minConfidence: 0.85 },
+
+  // ── frontend / ui-prototype → Kimi K2.6 (前端/多模态/视觉理解强) ──
+  { type: 'frontend', complexity: '*', model: 'kimi-k2.6', minConfidence: 0.85 },
+
+  // ── creative-writing → Kimi K2.5 (创意/长文/中文表达) ──
+  { type: 'creative', complexity: '*', model: 'kimi-k2.5', minConfidence: 0.80 },
 ];
 
 // ─── 策略权重配置 ──────────────────────────────────────────────────────
@@ -193,9 +209,9 @@ class RoutingEngine {
     const reasoningWeight = this._mapNeedToWeight(taskProfile.reasoning_need);
     score += model.capabilities.reasoning * weights.reasoning * reasoningWeight;
 
-    // 编码能力评分
-    const isCoding = taskProfile.type === 'coding';
-    score += model.capabilities.coding * weights.coding * (isCoding ? 1.5 : 0.5);
+    // 编码能力评分（coding / debug / review 均强化编码权重）
+    const isCodeHeavy = ['coding', 'debug', 'review'].includes(taskProfile.type);
+    score += model.capabilities.coding * weights.coding * (isCodeHeavy ? 1.5 : 0.5);
 
     // 速度评分
     score += model.capabilities.speed * weights.speed;
@@ -204,14 +220,20 @@ class RoutingEngine {
     const costPerf = model.capabilities.cost_efficiency;
     score += costPerf * weights.cost;
 
-    // 缓存加成
+    // 缓存加成（DeepSeek 独有优势）
     if (model.api && model.api.supports_cache) {
-      score += 0.1 * weights.cache;
+      score += 0.15 * weights.cache;
+    }
+
+    // 上下文长度加成（doc / review / architecture 类任务偏好长上下文）
+    const isLongContextHeavy = ['doc', 'review', 'architecture', 'question'].includes(taskProfile.type);
+    if (isLongContextHeavy && model.capabilities.context > 0.90) {
+      score += 0.10;
     }
 
     // 任务类型匹配加分
     if (model.suitable_for.includes(taskProfile.type)) {
-      score += 0.15;
+      score += 0.20;
     }
 
     // 健康状态扣分

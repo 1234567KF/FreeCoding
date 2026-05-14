@@ -87,6 +87,25 @@ Match PRD semantics to HTML components:
 
 Map to semantic CSS classes: `.ui-table`, `.ui-btn`, `.ui-card`, `.ui-modal`, `.ui-form`, `.ui-input`, `.ui-select`, `.ui-tag`, `.ui-badge`, `.ui-menu`, `.ui-tabs`, `.ui-breadcrumb`, `.ui-pagination`, `.ui-alert`.
 
+### Phase 1 扩展采访 — 业务约束采集
+
+> 以下问题确保在生成原型前采集完整的业务逻辑，消除设计阶段的决策盲区。
+
+**Q8 — 权限模型**：该页面涉及哪些角色？各角色对字段和操作的权限边界是什么？
+- 示例答案：Admin(所有操作) / Manager(仅部门内数据) / User(仅自己的数据)
+
+**Q9 — 模块关联**：该页面与系统其他模块有什么关联？是否涉及级联操作？
+- 示例答案：依赖用户管理模块的 user 数据；删除时级联删除薪资记录
+
+**Q10 — 系统约束**：该页面有什么系统级约束？（如全局唯一、软删除、配置限制等）
+- 示例答案：配置类数据全系统仅一条 active 记录；支持软删除
+
+**Q11 — 异常场景**：有什么可能的异常场景？如何恢复？
+- 示例答案：并发冲突(乐观锁)、网络超时(重试)、权限不足(提示联系管理员)
+
+**Q12 — 边界值**：字段有什么特殊的格式、范围或长度限制？
+- 示例答案：年龄 18-120；工号长度 8-20 字符；邮箱 RFC5322 格式
+
 ### Gate 1
 
 > Do not enter Phase 1 until all required parameters collected, project context detected, and PRD parsed.
@@ -192,6 +211,19 @@ Missing layers MUST still have empty `anno-tab-content` containers (prevents JS 
 
 All example data MUST be fictional and marked `(示例)`. No PII, credentials, or internal IPs.
 
+#### 扩展子层（详见 references/annotation-spec.md）
+
+在填充基础层级的同时，MUST 检查并按需填充以下扩展子层：
+
+- **L0.ops**：操作定义 — 页面支持的 CRUD 操作集合与权限边界
+- **L0.deps**：业务关联 — 与其他模块的依赖、级联影响
+- **L1.perm**：权限矩阵 — 角色 × 字段/操作的可见性与可操作性
+- **L1.constraints**：字段约束 — 外键、级联规则、系统级约束
+- **L1.bounds**：边界值 — min/max、长度、格式约束
+- **L2.exceptions**：异常处理 — 异常场景、触发条件、恢复方案
+
+> 填充模板与完整示例见 references/annotation-templates.md
+
 ### Step 1.5.3 — Wire Annotation Badges
 
 ```html
@@ -204,9 +236,33 @@ Parent elements with badges MUST have class `has-annotation` (for `position: rel
 
 Load the complete drawer HTML/CSS/JS from `references/anno-drawer-template.md`. All 7 tab containers (`anno-tab-l0` through `anno-tab-l6`) must be present even if some layers are empty.
 
+### 注释间引用格式规范
+
+原型注释中跨层级引用时，MUST 使用以下标准格式：
+
+| 引用类型 | 格式 | 示例 |
+|---------|------|------|
+| PRD 规则 | `[PRD Rxxx]` 或 `[PRD x.x.x]` | `[PRD R001-客户等级定义]` |
+| 状态引用 | `[L3-状态名]` | `[L3-已批准]` 状态可执行 |
+| 字段引用 | `[字段名]` | 依赖 `[user_id]` 非空 |
+| 权限引用 | `[@角色名]` | 仅 `[@admin]` 可执行 |
+| 异常引用 | `[#异常-场景名]` | 触发 `[#异常-数据冲突]` |
+
 ### Gate 1.5
 
 > Do not enter Phase 2 until annotation content generated for all required layers and drawer component embedded.
+
+### Gate 1.75 — 权限与约束完整性验证
+
+> 进入注释生成(Annotate)阶段前，MUST 通过以下验证。任何项缺失则返回 Phase 1 补全。
+
+- [ ] 所有角色的权限矩阵已定义 → 填充 L1.perm
+- [ ] 所有跨模块的依赖关系已列举 → 填充 L0.deps
+- [ ] 所有字段的约束规则已明确（外键、级联、系统约束）→ 填充 L1.constraints
+- [ ] 所有数值/字符字段的边界值已定义 → 填充 L1.bounds
+- [ ] 主要异常场景与恢复方案已覆盖 → 填充 L2.exceptions
+
+**简单 CRUD 页面豁免规则**：若页面仅为简单增删改查（无角色差异、无跨模块依赖），可豁免 L1.perm 和 L0.deps，但 L1.bounds 和 L1.constraints 仍为必填。
 
 ---
 
@@ -238,6 +294,25 @@ Two-dimensional review:
 Verification: `harness-gate-check.cjs --skill kf-ui-prototype-generator --stage step7 --required-sections "原型质量审查报告" --forbidden-patterns "❌"`
 
 ---
+
+## Gotchas — 原型注释生成常见陷阱
+
+> 这些是项目特定的已知陷阱，优先级高于通用最佳实践。
+
+1. **权限遗漏**：只标注了字段的权限，忘记标注操作按钮（编辑/删除/导出）的权限边界。
+   → 始终为每个可交互元素标注权限。
+
+2. **级联规则遗漏**：标注了 dept_id 是外键，但忘记说明删除部门时是否级联删除关联员工。
+   → 对所有外键关系强制标注级联策略（CASCADE / SET NULL / RESTRICT）。
+
+3. **系统约束遗漏**：配置表实际仅允许一条 active 记录，但注释中未标注。
+   → 对照 PRD 业务规则章节，逐条确认是否存在系统级约束。
+
+4. **边界值不完整**：标注了字段长度上限，忘记标注下限或特殊格式。
+   → 对所有数值类型强制标注 min/max；对所有字符串强制标注最大长度与格式。
+
+5. **异常处理缺失**：只描述了 Happy Path，未考虑网络超时、权限不足、数据冲突等异常。
+   → 对每个主要操作至少列举 3 个异常场景与恢复方案。
 
 ---
 
